@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CalendarClock, Coins, Filter, Search, Users } from "lucide-react";
 
@@ -124,12 +125,18 @@ export default function TournamentsPage() {
                 </div>
               </div>
               <div className="flex flex-col items-center gap-3">
-                <button className="rounded-full bg-[#14cc6f] px-6 py-2 text-sm font-semibold text-black transition hover:bg-[#0fa75b]">
+                <Link
+                  href="/login"
+                  className="rounded-full bg-[#14cc6f] px-6 py-2 text-sm font-semibold text-black transition hover:bg-[#0fa75b] text-center"
+                >
                   Join Now
-                </button>
-                <button className="rounded-full border border-white/15 px-6 py-2 text-sm font-semibold text-white transition hover:border-emerald-400/50">
+                </Link>
+                <Link
+                  href="/rules"
+                  className="rounded-full border border-white/15 px-6 py-2 text-sm font-semibold text-white transition hover:border-emerald-400/50 text-center"
+                >
                   View Details
-                </button>
+                </Link>
               </div>
             </article>
           ))}

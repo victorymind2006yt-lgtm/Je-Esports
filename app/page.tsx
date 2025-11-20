@@ -291,13 +291,19 @@ function Hero() {
           </p>
           <Stats />
           <div className="flex flex-wrap items-center justify-center gap-5">
-            <button className="flex items-center gap-2 rounded-full bg-[#14cc6f] px-8 py-4 text-lg font-semibold text-black transition hover:bg-[#0fa75b]">
+            <Link
+              href="/tournaments"
+              className="flex items-center gap-2 rounded-full bg-[#14cc6f] px-8 py-4 text-lg font-semibold text-black transition hover:bg-[#0fa75b]"
+            >
               Join Tournament Now
               <ArrowRight className="h-4 w-4" />
-            </button>
-            <button className="rounded-full border border-white/15 px-8 py-4 text-lg font-semibold text-white transition hover:border-emerald-400/50 hover:text-emerald-100">
+            </Link>
+            <Link
+              href="/tournaments"
+              className="rounded-full border border-white/15 px-8 py-4 text-lg font-semibold text-white transition hover:border-emerald-400/50 hover:text-emerald-100"
+            >
               View Leaderboard
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -391,10 +397,13 @@ function HowItWorks() {
             </div>
           ))}
         </div>
-        <button className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-[#14cc6f] px-4 py-3 text-base font-semibold text-black transition hover:bg-[#0fa75b]">
+        <Link
+          href="/tournaments"
+          className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-[#14cc6f] px-4 py-3 text-base font-semibold text-black transition hover:bg-[#0fa75b]"
+        >
           Join Now
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
     </section>
   );
@@ -442,10 +451,13 @@ function BrowseTournaments({ activeTab, onTabChange }: BrowseTournamentsProps) {
         </p>
       </div>
       <div className="text-center">
-        <button className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:border-emerald-400/50">
+        <Link
+          href="/tournaments"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:border-emerald-400/50"
+        >
           View All Tournaments
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
     </section>
   );
@@ -486,10 +498,13 @@ function WhyChooseUs() {
             wallet controls.
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-emerald-400/50">
+        <Link
+          href="/login"
+          className="flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-emerald-400/50"
+        >
           Admin Login
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
     </section>
   );
@@ -509,13 +524,19 @@ function Cta() {
         responsive dashboards keep you focused on the next drop.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-4">
-        <button className="rounded-full bg-[#14cc6f] px-6 py-3 text-base font-semibold text-black transition hover:bg-[#0fa75b]">
+        <Link
+          href="/signup"
+          className="rounded-full bg-[#14cc6f] px-6 py-3 text-base font-semibold text-black transition hover:bg-[#0fa75b]"
+        >
           Sign Up Free
-        </button>
-        <button className="flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-base font-semibold text-white transition hover:border-emerald-400/50">
+        </Link>
+        <Link
+          href="/contact"
+          className="flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-base font-semibold text-white transition hover:border-emerald-400/50"
+        >
           Contact Support
           <Headphones className="h-5 w-5" />
-        </button>
+        </Link>
       </div>
     </section>
   );
