@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -19,6 +20,7 @@ import {
   FileText,
   User as UserIcon,
   ChevronRight,
+  Clock3,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
@@ -28,7 +30,7 @@ import { auth } from "./firebase";
 const stats = [
   { label: "Active Players", value: "5k+" },
   { label: "Total Prizes", value: "50K+" },
-  { label: "Tournaments", value: "24/7" },
+  { label: "Tournaments Battles", value: "24/7" },
 ];
 
 const steps = [
@@ -77,8 +79,10 @@ const tournamentTabs = ["Upcoming", "Ongoing", "Past"] as const;
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Tournaments", href: "/tournaments" },
-  { label: "Contact", href: "/contact" },
+  { label: "Contact Us", href: "/contact" },
   { label: "Rules", href: "/rules" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Wallet", href: "/wallet" },
 ] as const;
 
 type SiteHeaderProps = {
@@ -110,69 +114,129 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-4 pb-24 pt-10 lg:px-10">
         <HowItWorks />
         <BrowseTournaments activeTab={activeTab} onTabChange={setActiveTab} />
-        <WhyChooseUs />
-        <Cta />
       </div>
+      <footer className="border-t border-white/10 py-6 text-center text-xs text-muted">
+        <p>© 2025 JE Esports. All rights reserved.</p>
+        <p className="mt-2">
+          <Link
+            href="/admin/login"
+            className="font-semibold text-emerald-300 hover:text-emerald-200"
+          >
+            Admin Login
+          </Link>
+        </p>
+      </footer>
     </div>
   );
 }
 
 function SiteHeader({ user, authReady }: SiteHeaderProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const filteredNav = navLinks.filter((item) => {
+    if (item.label === "Dashboard" || item.label === "Wallet") {
+      return !!user;
+    }
+    return true;
+  });
+
   return (
-    <header className="header-shell flex w-full items-center justify-between rounded-none px-6 py-4">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 overflow-hidden rounded-full bg-[#0d1611]">
-          <Image
-            src="/je-logo.png"
-            alt="JE Esports logo"
-            width={48}
-            height={48}
-            className="h-full w-full object-cover"
-            priority
-          />
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-emerald-300">
-            JE Esports
-          </p>
-          <p className="text-sm text-muted">Premier Free Fire League</p>
-        </div>
-      </div>
-      <nav className="hidden items-center gap-3 text-sm font-semibold text-muted lg:flex">
-        {navLinks.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="rounded-full px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="hidden items-center gap-3 lg:flex">
-        {!authReady ? (
-          <div className="h-9 w-32 rounded-full bg-white/5" />
-        ) : user ? null : (
-          <>
+    <>
+      <header className="header-shell flex w-full items-center justify-between rounded-none px-6 py-4">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="h-12 w-12 overflow-hidden rounded-full bg-[#0d1611]">
+            <Image
+              src="https://anyimage.io/storage/uploads/b876d0034821a9b733f61d5e3f56fb64"
+              alt="JE Esports logo"
+              width={48}
+              height={48}
+              className="h-full w-full object-cover"
+              priority
+            />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-emerald-300">
+              JE Esports
+            </p>
+            <p className="text-sm text-muted">Premier Free Fire League</p>
+          </div>
+        </Link>
+        <nav className="hidden items-center gap-3 text-sm font-semibold text-muted lg:flex">
+          {filteredNav.map((item) => (
             <Link
-              href="/login"
-              className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-white transition hover:border-emerald-400/60"
+              key={item.label}
+              href={item.href}
+              className="rounded-full px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
             >
-              Login
+              {item.label}
             </Link>
-            <Link
-              href="/signup"
-              className="rounded-full bg-[#14cc6f] px-5 py-2 text-sm font-semibold text-black transition hover:bg-[#0fa75b]"
-            >
-              Sign Up
-            </Link>
-          </>
-        )}
-      </div>
-      <button className="lg:hidden" aria-label="Open menu">
-        <Menu className="h-5 w-5 text-muted" />
-      </button>
-    </header>
+          ))}
+        </nav>
+        <div className="hidden items-center gap-3 lg:flex">
+          {!authReady ? (
+            <div className="h-9 w-32 rounded-full bg-white/5" />
+          ) : user ? null : (
+            <>
+              <Link
+                href="/login"
+                className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-white transition hover:border-emerald-400/60"
+              >
+                Login
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-full bg-[#14cc6f] px-5 py-2 text-sm font-semibold text-black transition hover:bg-[#0fa75b]"
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          className="lg:hidden"
+          aria-label="Toggle menu"
+          onClick={() => setMobileOpen((prev) => !prev)}
+        >
+          <Menu className="h-5 w-5 text-muted" />
+        </button>
+      </header>
+
+      {mobileOpen ? (
+        <nav className="lg:hidden border-t border-white/10 bg-[#050a0f] px-6 py-4 text-sm font-semibold text-muted">
+          <div className="flex flex-col gap-2">
+            {filteredNav.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className="rounded-full px-3 py-2 transition hover:bg-white/5 hover:text-white"
+              >
+                {item.label}
+              </Link>
+            ))}
+            {!authReady || user ? null : (
+              <div className="mt-2 flex flex-col gap-2 border-t border-white/10 pt-3">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-full border border-white/15 px-3 py-2 text-center text-sm font-semibold text-white transition hover:border-emerald-400/60"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-full bg-[#14cc6f] px-3 py-2 text-center text-sm font-semibold text-black transition hover:bg-[#0fa75b]"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+        </nav>
+      ) : null}
+    </>
   );
 }
 
@@ -186,6 +250,7 @@ function UserProfileBar({ user }: UserProfileBarProps) {
   const roleLabel =
     email === "fflionking12345678@gmail.com" ? "Admin" : "Player";
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -195,45 +260,75 @@ function UserProfileBar({ user }: UserProfileBarProps) {
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="relative mx-auto flex w-full max-w-6xl justify-end px-4 pt-2 lg:px-10">
+    <div className="fixed right-4 top-4 z-40 flex flex-col items-end">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-semibold text-emerald-300 shadow-md"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-semibold text-emerald-300 shadow-md cursor-pointer"
         aria-label="Open profile menu"
       >
         {initial}
       </button>
 
       {open ? (
-        <div className="absolute right-4 top-12 w-64 rounded-2xl border border-white/10 bg-[#050a0f] p-4 shadow-xl">
+        <div className="mt-3 w-64 rounded-2xl border border-white/10 bg-[#050a0f] p-4 shadow-xl">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
               {initial}
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">{displayName}</p>
-              <p className="text-xs text-muted">{roleLabel} · {email}</p>
+              <p className="text-xs font-semibold leading-tight text-white">{displayName}</p>
+              <p className="text-[10px] leading-tight text-muted break-all">{roleLabel} · {email}</p>
             </div>
           </div>
           <div className="space-y-1 text-sm text-muted">
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/dashboard");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+            >
               <LayoutDashboard className="h-4 w-4" />
               <span>Dashboard</span>
             </button>
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/wallet");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+            >
               <Wallet className="h-4 w-4" />
               <span>Wallet</span>
             </button>
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/tournaments");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+            >
               <Users className="h-4 w-4" />
               <span>My Tournaments</span>
             </button>
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/settings");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+            >
               <Shield className="h-4 w-4" />
               <span>Settings</span>
             </button>
-            <button className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/theme");
+              }}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+            >
               <span className="inline-flex items-center gap-2">
                 <Palette className="h-4 w-4" />
                 <span>Theme</span>
@@ -241,11 +336,23 @@ function UserProfileBar({ user }: UserProfileBarProps) {
               <ChevronRight className="h-3 w-3 text-muted" />
             </button>
             <div className="my-1 h-px bg-white/10" />
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/privacy");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+            >
               <ShieldCheck className="h-4 w-4" />
               <span>Privacy Policy</span>
             </button>
-            <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/terms");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+            >
               <FileText className="h-4 w-4" />
               <span>Terms of Service</span>
             </button>
@@ -264,6 +371,26 @@ function UserProfileBar({ user }: UserProfileBarProps) {
 }
 
 function Hero() {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const nextHour = new Date(now);
+      nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+      const diffMs = nextHour.getTime() - now.getTime();
+      const diffSeconds = Math.max(0, Math.floor(diffMs / 1000));
+      setTimeLeft(diffSeconds);
+    };
+
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const minutes = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+  const seconds = String(timeLeft % 60).padStart(2, "0");
+
   return (
     <section
       id="hero"
@@ -279,15 +406,30 @@ function Hero() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
             className="text-4xl font-bold leading-tight text-white sm:text-5xl"
           >
-            Welcome to <span className="text-emerald-300">JE Esports</span>
+            <motion.span
+              animate={{
+                textShadow: [
+                  "0 0 0 rgba(16,185,129,0)",
+                  "0 0 18px rgba(16,185,129,0.9)",
+                  "0 0 0 rgba(16,185,129,0)",
+                ],
+              }}
+              transition={{
+                duration: 2.5,
+                repeat: Infinity,
+                repeatType: "reverse",
+                ease: "easeInOut",
+              }}
+            >
+              Welcome to <span className="text-emerald-300">JE Esports</span>
+            </motion.span>
           </motion.h1>
           <p className="mx-auto max-w-2xl text-base text-muted sm:text-lg">
-            Join thousands of players in competitive Free Fire battles. Win prizes,
-            climb leaderboards, and become a champion with entry fees starting at
-            just 40 PKR.
+            Join thousands in Free Fire battles. Win prizes, climb leaderboards,
+            and be a champion with entry fees.
           </p>
           <Stats />
           <div className="flex flex-wrap items-center justify-center gap-5">
@@ -305,6 +447,30 @@ function Hero() {
               View Leaderboard
             </Link>
           </div>
+
+          <div className="mt-8 flex justify-center">
+            <div className="w-full max-w-xl rounded-3xl border border-emerald-500/40 bg-[#050a0f] px-6 py-4 text-left shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+              <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-emerald-300" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Next Tournament In:
+                    </p>
+                    <p className="text-xs text-muted">
+                      Tournaments start every hour on the hour!
+                    </p>
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#14cc6f] px-5 py-3 text-lg font-semibold text-black">
+                  <Clock3 className="h-4 w-4" />
+                  <span>
+                    {minutes}:{seconds}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -313,7 +479,7 @@ function Hero() {
 
 function Stats() {
   return (
-    <section className="mt-6 grid gap-2 sm:grid-cols-3">
+    <section className="mt-6 grid grid-cols-3 gap-2">
       {stats.map((stat) => (
         <div
           key={stat.label}
@@ -340,10 +506,6 @@ function HowItWorks() {
           <h2 className="mt-3 text-3xl font-semibold text-white">
             Get started in 4 pro-level steps
           </h2>
-          <p className="text-muted">
-            Sign up, add funds, join your favorite lobby, and claim your rewards
-            with instant wallet settlements.
-          </p>
         </div>
         <div className="space-y-4">
           {steps.map((step, index) => (
@@ -418,13 +580,10 @@ function BrowseTournaments({ activeTab, onTabChange }: BrowseTournamentsProps) {
   return (
     <section id="tournaments" className="space-y-6">
       <div className="space-y-2 text-center">
-        <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
+        <p className="text-base uppercase tracking-[0.35em] text-emerald-300">
           Browse Tournaments
         </p>
         <h2 className="text-3xl font-semibold text-white">Pick your lobby</h2>
-        <p className="text-muted">
-          Upcoming, live and past events managed by Firebase-powered admin panel.
-        </p>
       </div>
       <div className="flex flex-wrap justify-center gap-3">
         {tournamentTabs.map((tab) => (
@@ -457,85 +616,6 @@ function BrowseTournaments({ activeTab, onTabChange }: BrowseTournamentsProps) {
         >
           View All Tournaments
           <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </section>
-  );
-}
-
-function WhyChooseUs() {
-  return (
-    <section className="space-y-6">
-      <div className="text-center">
-        <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
-          Why Choose Us?
-        </p>
-        <h2 className="mt-2 text-3xl font-semibold text-white">
-          Built for champions
-        </h2>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {reasons.map(({ icon: Icon, title, description }) => (
-          <div
-            key={title}
-            className="panel-dark flex flex-col gap-3 rounded-3xl p-5"
-          >
-            <div className="flex items-center gap-3">
-              <Icon className="h-6 w-6 text-emerald-300" />
-              <p className="text-lg font-semibold text-white">{title}</p>
-            </div>
-            <p className="text-sm text-muted">{description}</p>
-          </div>
-        ))}
-      </div>
-      <div className="panel-dark flex flex-col items-center gap-4 rounded-3xl px-6 py-10 text-center md:flex-row md:justify-between md:text-left">
-        <div>
-          <p className="text-xl font-semibold text-white">
-            Need admin access?
-          </p>
-          <p className="text-sm text-muted">
-            Dedicated control center with Cloud Functions, audit logs and secure
-            wallet controls.
-          </p>
-        </div>
-        <Link
-          href="/login"
-          className="flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-emerald-400/50"
-        >
-          Admin Login
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </section>
-  );
-}
-
-function Cta() {
-  return (
-    <section id="cta" className="panel-dark rounded-3xl px-6 py-12 text-center">
-      <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
-        Ready to Start Winning?
-      </p>
-      <h2 className="mt-3 text-3xl font-semibold text-white">
-        Join daily Free Fire tournaments with instant payouts.
-      </h2>
-      <p className="mx-auto mt-3 max-w-2xl text-muted">
-        Secure Firebase Authentication, wallet automation via Cloud Functions and
-        responsive dashboards keep you focused on the next drop.
-      </p>
-      <div className="mt-6 flex flex-wrap justify-center gap-4">
-        <Link
-          href="/signup"
-          className="rounded-full bg-[#14cc6f] px-6 py-3 text-base font-semibold text-black transition hover:bg-[#0fa75b]"
-        >
-          Sign Up Free
-        </Link>
-        <Link
-          href="/contact"
-          className="flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-base font-semibold text-white transition hover:border-emerald-400/50"
-        >
-          Contact Support
-          <Headphones className="h-5 w-5" />
         </Link>
       </div>
     </section>

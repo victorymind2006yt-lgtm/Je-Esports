@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { auth } from "../firebase";
 
+const ADMIN_EMAIL = "fflionking12345678@gmail.com";
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [formValues, setFormValues] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
@@ -27,12 +30,26 @@ export default function LoginPage() {
 
     try {
       setIsLoading(true);
-      await signInWithEmailAndPassword(auth, formValues.email, formValues.password);
+      await signInWithEmailAndPassword(
+        auth,
+        formValues.email,
+        formValues.password,
+      );
       setSuccess("Signed in successfully. Redirecting...");
-      
-      // Redirect to home after 1 second
+
+      const redirect = searchParams.get("redirect");
+      const isAdminEmail =
+        formValues.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+      // Redirect after 1 second
       setTimeout(() => {
-        window.location.href = "/";
+        if (redirect && isAdminEmail) {
+          router.push(redirect);
+        } else if (isAdminEmail) {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
       }, 1000);
 
     } catch (firebaseError: unknown) {

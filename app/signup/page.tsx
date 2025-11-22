@@ -11,7 +11,7 @@ const signupFields = [
   {
     label: "Your Name",
     placeholder: "Enter your full name",
-    helper: "Use your real name. This will be displayed on your profile.",
+    helper: "Use your real FreeFire name . This will be displayed on your profile.",
     type: "text",
     name: "name",
   },
