@@ -1,13 +1,12 @@
-
 import { db } from "../firebase";
-import { 
-  collection, 
-  query, 
-  where, 
+import {
+  collection,
+  query,
+  where,
   getDocs,
   updateDoc,
   doc,
-  Timestamp 
+  Timestamp
 } from "firebase/firestore";
 import { Tournament, TournamentStatus } from "./types";
 
@@ -15,60 +14,84 @@ import { Tournament, TournamentStatus } from "./types";
  * Updates tournament states based on time:
  * - upcoming → ongoing (when current time passes start time)
  * - ongoing → completed (when current time passes end time)
+ * - completed → awaiting_payout (1 minute after end time)
  */
-export const updateTournamentStates = async (): Promise<{ 
+export const updateTournamentStates = async (): Promise<{
   updated: number,
   startedCount: number,
-  completedCount: number 
+  completedCount: number,
+  awaitingPayoutCount: number
 }> => {
   const now = new Date();
   const currentTimestamp = Timestamp.fromDate(now);
+
+  // 1 minute ago for the awaiting_payout check
+  const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+  const oneMinuteAgoTimestamp = Timestamp.fromDate(oneMinuteAgo);
+
   let startedCount = 0;
   let completedCount = 0;
+  let awaitingPayoutCount = 0;
 
   try {
-    // Find upcoming tournaments that should be ongoing
+    // 1. upcoming -> ongoing
     const upcomingQuery = query(
       collection(db, "tournaments"),
       where("status", "==", "upcoming"),
       where("startTime", "<=", currentTimestamp)
     );
-    
+
     const upcomingSnapshot = await getDocs(upcomingQuery);
-    
-    // Update each tournament that should be ongoing
     const upcomingPromises = upcomingSnapshot.docs.map(async (docSnapshot) => {
       await updateDoc(doc(db, "tournaments", docSnapshot.id), {
         status: "ongoing"
       });
       startedCount++;
     });
-    
-    // Find all non-completed tournaments that have passed their end time
-    // This broader query catches any tournament that should be completed
+
+    // 2. ongoing -> completed
     const ongoingQuery = query(
       collection(db, "tournaments"),
       where("status", "in", ["upcoming", "ongoing"]),
       where("endTime", "<=", currentTimestamp)
     );
-    
+
     const ongoingSnapshot = await getDocs(ongoingQuery);
-    
-    // Update each tournament that should be completed
     const ongoingPromises = ongoingSnapshot.docs.map(async (docSnapshot) => {
-      await updateDoc(doc(db, "tournaments", docSnapshot.id), {
-        status: "completed"
-      });
-      completedCount++;
+      // Only update if it's not already completed or further
+      const data = docSnapshot.data();
+      if (data.status !== "completed" && data.status !== "awaiting_payout" && data.status !== "paid") {
+        await updateDoc(doc(db, "tournaments", docSnapshot.id), {
+          status: "completed"
+        });
+        completedCount++;
+      }
     });
-    
+
+    // 3. completed -> awaiting_payout
+    // We want to find tournaments that are 'completed' AND their endTime was more than 1 minute ago
+    const completedQuery = query(
+      collection(db, "tournaments"),
+      where("status", "==", "completed"),
+      where("endTime", "<=", oneMinuteAgoTimestamp)
+    );
+
+    const completedSnapshot = await getDocs(completedQuery);
+    const completedPromises = completedSnapshot.docs.map(async (docSnapshot) => {
+      await updateDoc(doc(db, "tournaments", docSnapshot.id), {
+        status: "awaiting_payout"
+      });
+      awaitingPayoutCount++;
+    });
+
     // Wait for all updates to complete
-    await Promise.all([...upcomingPromises, ...ongoingPromises]);
-    
+    await Promise.all([...upcomingPromises, ...ongoingPromises, ...completedPromises]);
+
     return {
-      updated: startedCount + completedCount,
+      updated: startedCount + completedCount + awaitingPayoutCount,
       startedCount,
-      completedCount
+      completedCount,
+      awaitingPayoutCount
     };
   } catch (error) {
     console.error("Error updating tournament states:", error);
@@ -82,21 +105,26 @@ export const updateTournamentStates = async (): Promise<{
  */
 export const checkTournamentState = (tournament: Tournament): TournamentStatus | null => {
   const now = new Date();
-  
-  // First priority: Check if end time has passed for any non-completed tournament
-  // This ensures tournaments move to completed even if they somehow missed the ongoing state
-  if (tournament.status !== "completed" && tournament.status !== "cancelled" && 
-      tournament.endTime && tournament.endTime <= now) {
-    console.log(`Tournament ${tournament.id} end time reached: ${tournament.endTime.toISOString()}, current time: ${now.toISOString()}`);
+
+  // Check for completed -> awaiting_payout (1 minute buffer)
+  if (tournament.status === "completed" && tournament.endTime) {
+    const payoutTime = new Date(tournament.endTime.getTime() + 60 * 1000); // 1 minute after end
+    if (now >= payoutTime) {
+      return "awaiting_payout";
+    }
+  }
+
+  // Check for ongoing -> completed
+  if ((tournament.status === "ongoing" || tournament.status === "upcoming") &&
+    tournament.endTime && tournament.endTime <= now) {
     return "completed";
   }
-  
-  // Second priority: Move from upcoming to ongoing
+
+  // Check for upcoming -> ongoing
   if (tournament.status === "upcoming" && tournament.startTime <= now) {
-    console.log(`Tournament ${tournament.id} start time reached: ${tournament.startTime.toISOString()}, current time: ${now.toISOString()}`);
     return "ongoing";
   }
-  
+
   // No state change needed
   return null;
 };

@@ -120,14 +120,6 @@ export default function Home() {
       </div>
       <footer className="border-t border-white/10 py-6 text-center text-xs text-muted">
         <p>© 2025 JE Esports. All rights reserved.</p>
-        <p className="mt-2">
-          <Link
-            href="/admin/login"
-            className="font-semibold text-emerald-300 hover:text-emerald-200"
-          >
-            Admin Login
-          </Link>
-        </p>
       </footer>
     </div>
   );
@@ -253,6 +245,8 @@ function UserProfileBar({ user }: UserProfileBarProps) {
   const roleLabel =
     email === "fflionking12345678@gmail.com" ? "Admin" : "Player";
   const [open, setOpen] = useState(false);
+  const [balance, setBalance] = useState<number>(0);
+  const [loadingBalance, setLoadingBalance] = useState(true);
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -262,15 +256,47 @@ function UserProfileBar({ user }: UserProfileBarProps) {
 
   const initial = displayName.charAt(0).toUpperCase();
 
+  // Fetch wallet balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!user) return;
+
+      try {
+        const { getDoc, doc } = await import("firebase/firestore");
+        const { db } = await import("./firebase");
+
+        const walletRef = doc(db, "wallets", user.uid);
+        const walletSnap = await getDoc(walletRef);
+
+        if (walletSnap.exists()) {
+          const walletData = walletSnap.data();
+          setBalance(walletData.balance || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching balance:", error);
+      } finally {
+        setLoadingBalance(false);
+      }
+    };
+
+    fetchBalance();
+  }, [user]);
+
   return (
     <div className="fixed right-4 top-24 sm:top-4 z-40 flex flex-col items-end">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-semibold text-emerald-300 shadow-md cursor-pointer"
+        className="flex items-center gap-2 rounded-full bg-emerald-500/15 px-2 py-1.5 shadow-md cursor-pointer hover:bg-emerald-500/20 transition"
         aria-label="Open profile menu"
       >
-        {initial}
+        <Gem className="h-4 w-4 text-emerald-300" />
+        <span className="text-sm font-semibold text-white min-w-[40px] text-center">
+          {loadingBalance ? "..." : balance}
+        </span>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-semibold text-emerald-300">
+          {initial}
+        </div>
       </button>
 
       {open ? (
@@ -308,12 +334,12 @@ function UserProfileBar({ user }: UserProfileBarProps) {
             <button
               onClick={() => {
                 setOpen(false);
-                router.push("/tournaments");
+                router.push("/room-details");
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
             >
               <Users className="h-4 w-4" />
-              <span>My Tournaments</span>
+              <span>Room ID & Password</span>
             </button>
             <button
               onClick={() => {

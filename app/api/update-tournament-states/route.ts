@@ -1,34 +1,37 @@
-import { NextResponse } from "next/server";
-import { updateTournamentStates } from "../../lib/tournamentStateManager";
+import { NextResponse } from 'next/server';
+import { updateTournamentStates } from '../../lib/tournamentStateManager';
 
-export const dynamic = 'force-dynamic'; // No caching for this route
+export const dynamic = 'force-dynamic';
 
 /**
- * API Route handler to update tournament states automatically
- * This can be called via a CRON job or manually triggered
- * 
- * @route GET /api/update-tournament-states
+ * API route to update tournament states based on current time
+ * This can be called by a CRON job or manually to ensure tournaments
+ * transition through their lifecycle states automatically
  */
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    // Optional API key check for security (implement in production)
-    // const apiKey = request.headers.get('x-api-key');
-    // if (!apiKey || apiKey !== process.env.TOURNAMENT_UPDATE_API_KEY) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
-
     const result = await updateTournamentStates();
-    
+
     return NextResponse.json({
       success: true,
-      message: `Tournament states updated. Started: ${result.startedCount}, Completed: ${result.completedCount}`,
-      ...result
+      message: 'Tournament states updated successfully',
+      ...result,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error updating tournament states:', error);
     return NextResponse.json(
-      { error: 'Failed to update tournament states' },
+      {
+        success: false,
+        error: 'Failed to update tournament states',
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }
+}
+
+export async function POST() {
+  // Allow POST requests as well for flexibility
+  return GET();
 }

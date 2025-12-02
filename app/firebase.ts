@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, Firestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -17,7 +17,17 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
-});
+
+// Initialize Firestore - use getFirestore if already initialized
+let db: Firestore;
+try {
+  db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+  });
+} catch (error) {
+  // If already initialized, just get the existing instance
+  db = getFirestore(app);
+}
+
+export { db };
 export const storage = getStorage(app);

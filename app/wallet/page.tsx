@@ -207,9 +207,25 @@ export default function WalletPage() {
       // For withdrawals, immediately reserve (deduct) the amount from the wallet balance
       if (type === "withdraw") {
         const walletRef = doc(db, "wallets", user.uid);
+
+        // Ensure wallet exists before transaction
+        const walletCheck = await getDoc(walletRef);
+        if (!walletCheck.exists()) {
+          await setDoc(walletRef, {
+            balance: 0,
+            totalDeposited: 0,
+            totalWithdrawn: 0,
+            totalEarnings: 0
+          }, { merge: true });
+        }
+
         try {
           await runTransaction(db, async (transaction) => {
             const walletSnap = await transaction.get(walletRef);
+            if (!walletSnap.exists()) {
+              throw new Error("Wallet not found");
+            }
+
             const walletData = (walletSnap.data() as any) || {};
             const currentBalance = walletData.balance ?? 0;
 
@@ -219,13 +235,9 @@ export default function WalletPage() {
 
             const newBalance = currentBalance - value;
 
-            transaction.set(
-              walletRef,
-              {
-                balance: newBalance,
-              },
-              { merge: true },
-            );
+            transaction.update(walletRef, {
+              balance: newBalance
+            });
           });
         } catch (err) {
           console.error("Failed to reserve balance for withdrawal", err);
@@ -257,10 +269,10 @@ export default function WalletPage() {
         ...(type === "deposit" && screenshotUrl ? { screenshotUrl } : {}),
         ...(type === "withdraw"
           ? {
-              withdrawMethod: withdrawMethod,
-              recipientName: withdrawRecipientName,
-              recipientAccount: withdrawRecipientAccount,
-            }
+            withdrawMethod: withdrawMethod,
+            recipientName: withdrawRecipientName,
+            recipientAccount: withdrawRecipientAccount,
+          }
           : {}),
       });
 
@@ -514,11 +526,10 @@ export default function WalletPage() {
             <button
               type="button"
               onClick={() => setActiveTab("deposit")}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${
-                activeTab === "deposit"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "deposit"
                   ? "bg-emerald-500 text-black"
                   : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
-              }`}
+                }`}
             >
               <ArrowDownToLine className="h-4 w-4" />
               <span>Deposit</span>
@@ -526,11 +537,10 @@ export default function WalletPage() {
             <button
               type="button"
               onClick={() => setActiveTab("withdraw")}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${
-                activeTab === "withdraw"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "withdraw"
                   ? "bg-emerald-500 text-black"
                   : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
-              }`}
+                }`}
             >
               <ArrowUpFromLine className="h-4 w-4" />
               <span>Withdraw</span>
@@ -538,11 +548,10 @@ export default function WalletPage() {
             <button
               type="button"
               onClick={() => setActiveTab("history")}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${
-                activeTab === "history"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "history"
                   ? "bg-emerald-500 text-black"
                   : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
-              }`}
+                }`}
             >
               <History className="h-4 w-4" />
               <span>History</span>
@@ -550,11 +559,10 @@ export default function WalletPage() {
             <button
               type="button"
               onClick={() => setActiveTab("redeem")}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${
-                activeTab === "redeem"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "redeem"
                   ? "bg-emerald-500 text-black"
                   : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
-              }`}
+                }`}
             >
               <History className="h-4 w-4" />
               <span>Redeem</span>
@@ -916,11 +924,10 @@ export default function WalletPage() {
                         </div>
                       </div>
                       <p
-                        className={`font-semibold ${
-                          tx.type === "deposit"
+                        className={`font-semibold ${tx.type === "deposit"
                             ? "text-emerald-300"
                             : "text-red-300"
-                        }`}
+                          }`}
                       >
                         {tx.type === "withdraw" ? "-" : "+"}
                         {tx.amount}{" "}

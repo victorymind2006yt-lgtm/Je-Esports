@@ -174,6 +174,14 @@ export default function AdminDashboardPage() {
   const [selectedTournamentForRoom, setSelectedTournamentForRoom] = useState<Tournament | null>(null);
   const [roomDetails, setRoomDetails] = useState({ roomId: "", roomPassword: "" });
 
+  const [isNotFound, setIsNotFound] = useState(true);
+
+  // Participants Modal State
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [selectedTournamentForParticipants, setSelectedTournamentForParticipants] = useState<Tournament | null>(null);
+  const [participantsList, setParticipantsList] = useState<PlayerRegistration[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+
 
 
   const router = useRouter();
@@ -197,8 +205,17 @@ export default function AdminDashboardPage() {
       setAuthReady(true);
       setCurrentUser(user);
 
+      // Verify secret access path
+      if (sessionStorage.getItem("admin_secret_access") === "true") {
+        setIsNotFound(false);
+      } else {
+        // Already true by default, but just in case
+        setIsNotFound(true);
+        return;
+      }
+
       if (!user) {
-        router.push("/admin/login");
+        router.push("/");
         return;
       }
 
@@ -399,12 +416,22 @@ export default function AdminDashboardPage() {
 
   const handleLogout = async () => {
     try {
+      sessionStorage.removeItem("admin_secret_access");
       await signOut(auth);
       window.location.href = "/";
     } catch (error) {
       console.error("Failed to sign out", error);
     }
   };
+
+  if (isNotFound) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
+        <h1 className="text-4xl font-bold">404</h1>
+        <p className="mt-2 text-lg text-gray-500">This page could not be found.</p>
+      </div>
+    );
+  }
 
   const handleCreateRedeemCode = async () => {
     const value = Number(redeemAmount);
@@ -945,6 +972,23 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleOpenParticipants = async (tournament: Tournament) => {
+    try {
+      setSelectedTournamentForParticipants(tournament);
+      setTournamentActionId(null); // Close dropdown
+      setShowParticipantsModal(true);
+      setLoadingParticipants(true);
+
+      const participants = await getTournamentRegistrations(tournament.id);
+      setParticipantsList(participants);
+    } catch (error) {
+      console.error("Failed to load participants", error);
+      alert("Failed to load participants. Please try again.");
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
   if (!authReady || !currentUser || !isAdmin) {
     return (
       <div className="global-bg flex min-h-screen items-center justify-center px-4 text-white">
@@ -1018,7 +1062,7 @@ export default function AdminDashboardPage() {
   };
 
   const tabs: { id: AdminTab; label: string }[] = [
-    { id: "dashboard", label: "Dashboard" },
+    { id: "dashboard", label: "Primary" },
     { id: "tournaments", label: "Tournaments" },
     { id: "matches", label: "Matches" },
     { id: "users", label: "Users" },
@@ -1164,27 +1208,27 @@ export default function AdminDashboardPage() {
                     switch (tournament.status) {
                       case "upcoming":
                         statusColor = "bg-[#f97316] text-white border-none"; // Orange
-                        statusLabel = "Upcoming";
+                        statusLabel = "upcoming";
                         break;
                       case "ongoing":
                         statusColor = "bg-emerald-500 text-white border-none"; // Green
-                        statusLabel = "Ongoing";
+                        statusLabel = "ongoing";
                         break;
                       case "completed":
                         statusColor = "bg-blue-500 text-white border-none"; // Blue
-                        statusLabel = "Completed";
+                        statusLabel = "completed";
                         break;
                       case "awaiting_payout":
                         statusColor = "bg-white text-black border-none font-bold"; // White
-                        statusLabel = "Awaiting Payout";
+                        statusLabel = "awaiting_payout";
                         break;
                       case "paid":
                         statusColor = "bg-[#1a1a1a] text-white border border-white/20"; // Dark
-                        statusLabel = "Paid";
+                        statusLabel = "paid";
                         break;
                       case "cancelled":
                         statusColor = "bg-red-500/10 text-red-400 border border-red-500/20";
-                        statusLabel = "Cancelled";
+                        statusLabel = "cancelled";
                         break;
                     }
 
@@ -1240,6 +1284,14 @@ export default function AdminDashboardPage() {
                                 >
                                   <Lock className="mr-2 h-3.5 w-3.5" />
                                   Share Room Details
+                                </button>
+
+                                <button
+                                  onClick={() => handleOpenParticipants(tournament)}
+                                  className="flex w-full items-center px-4 py-2 text-xs text-white hover:bg-white/5"
+                                >
+                                  <Users className="mr-2 h-3.5 w-3.5" />
+                                  Participants
                                 </button>
 
                                 <button
@@ -1439,56 +1491,58 @@ export default function AdminDashboardPage() {
                           </div>
                         </td>
                         <td className="py-3 pr-4">
-                          <div className="relative inline-block" data-dropdown>
-                            <button
-                              type="button"
-                              onClick={() => setUserActionId(userActionId === userSummary.id ? null : userSummary.id)}
-                              className="rounded-full p-1 text-muted transition hover:bg-white/5 hover:text-white"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                            {userActionId === userSummary.id && (
-                              <div className="absolute right-0 z-10 mt-1 w-48 rounded-2xl border border-white/10 bg-[#0a0f0d] py-2 shadow-xl">
-                                {!isAdmin && (
+                          {!isSuperAdmin && (
+                            <div className="relative inline-block" data-dropdown>
+                              <button
+                                type="button"
+                                onClick={() => setUserActionId(userActionId === userSummary.id ? null : userSummary.id)}
+                                className="rounded-full p-1 text-muted transition hover:bg-white/5 hover:text-white"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                              {userActionId === userSummary.id && (
+                                <div className="absolute right-0 z-10 mt-1 w-48 rounded-2xl border border-white/10 bg-[#0a0f0d] py-2 shadow-xl">
+                                  {!isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleGrantAdmin(userSummary.id, userSummary.displayName, userSummary.email);
+                                        setUserActionId(null);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-xs text-white transition hover:bg-emerald-500/10"
+                                    >
+                                      <ShieldCheck className="mr-2 inline h-3 w-3" />
+                                      Grant Admin
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      handleGrantAdmin(userSummary.id, userSummary.displayName, userSummary.email);
+                                      handleBanUser(userSummary.id, userSummary.displayName);
                                       setUserActionId(null);
                                     }}
-                                    className="w-full px-4 py-2 text-left text-xs text-white transition hover:bg-emerald-500/10"
+                                    className="w-full px-4 py-2 text-left text-xs text-yellow-300 transition hover:bg-yellow-500/10"
                                   >
-                                    <ShieldCheck className="mr-2 inline h-3 w-3" />
-                                    Grant Admin
+                                    <XCircle className="mr-2 inline h-3 w-3" />
+                                    Ban User
                                   </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleBanUser(userSummary.id, userSummary.displayName);
-                                    setUserActionId(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-xs text-yellow-300 transition hover:bg-yellow-500/10"
-                                >
-                                  <XCircle className="mr-2 inline h-3 w-3" />
-                                  Ban User
-                                </button>
-                                {!isSuperAdmin && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleDeleteUser(userSummary.id, userSummary.displayName);
-                                      setUserActionId(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-xs text-red-300 transition hover:bg-red-500/10"
-                                  >
-                                    <Trash2 className="mr-2 inline h-3 w-3" />
-                                    Delete User
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                                  {!isSuperAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleDeleteUser(userSummary.id, userSummary.displayName);
+                                        setUserActionId(null);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-xs text-red-300 transition hover:bg-red-500/10"
+                                    >
+                                      <Trash2 className="mr-2 inline h-3 w-3" />
+                                      Delete User
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -2150,7 +2204,7 @@ export default function AdminDashboardPage() {
                         <option value="">Select a player</option>
                         {tournamentParticipants.map((p) => (
                           <option key={p.id} value={p.userId}>
-                            {p.userName} ({p.gameId})
+                            {p.userName}
                           </option>
                         ))}
                       </select>
@@ -2272,6 +2326,90 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* Participants Modal */}
+      {showParticipantsModal && selectedTournamentForParticipants && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#080f0c] p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white">Tournament Participants</h3>
+                <p className="text-xs text-muted">
+                  {selectedTournamentForParticipants.name} • {participantsList.length} Players Registered
+                </p>
+              </div>
+              <button
+                onClick={() => setShowParticipantsModal(false)}
+                className="rounded-full bg-white/5 p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-6 max-h-[60vh] overflow-y-auto pr-2">
+              {loadingParticipants ? (
+                <div className="flex justify-center py-8">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+                </div>
+              ) : participantsList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Users className="h-12 w-12 text-white/10" />
+                  <p className="mt-4 text-sm font-medium text-white">No participants yet</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Players who join will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {participantsList.map((participant) => (
+                    <div
+                      key={participant.id}
+                      className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/5 p-3"
+                    >
+                      {participant.userPhotoURL ? (
+                        <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-white/10">
+                          <img
+                            src={participant.userPhotoURL}
+                            alt={participant.userName}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-300">
+                          {participant.userName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">
+                          {participant.userName}
+                        </p>
+                        <p className="truncate text-xs text-muted">
+                          {participant.userEmail}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2 text-[10px] text-emerald-300">
+                          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5">
+                            {selectedTournamentForParticipants.mode === 'solo'
+                              ? `Slot #${participant.slotNumber}`
+                              : `Team #${participant.slotNumber}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end border-t border-white/10 pt-4">
+              <button
+                onClick={() => setShowParticipantsModal(false)}
+                className="rounded-full bg-white/10 px-6 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2294,6 +2432,7 @@ function AdminStatCard({ label, description, value, icon: Icon }: StatCardProps)
         <p className="text-2xl font-semibold text-white">{value}</p>
         <p className="text-xs text-muted">{description}</p>
       </div>
+
     </div>
   );
 }

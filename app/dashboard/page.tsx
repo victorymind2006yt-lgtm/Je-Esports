@@ -10,6 +10,7 @@ import { getPlayerRegistrations } from "../lib/firebase";
 
 import {
   ArrowRight,
+  ArrowUpFromLine,
   LayoutDashboard,
   Wallet as WalletIcon,
   Users,
@@ -31,6 +32,7 @@ import { auth } from "../firebase";
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Tournaments", href: "/tournaments" },
+  { label: "Room Details", href: "/room-details" },
   { label: "Contact Us", href: "/contact" },
   { label: "Rules", href: "/rules" },
   { label: "Dashboard", href: "/dashboard" },
@@ -53,7 +55,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({
     balance: 0,
     tournamentsPlayed: 0,
-    totalKills: 0,
+    totalWithdrawn: 0,
     totalEarnings: 0
   });
   const router = useRouter();
@@ -85,7 +87,7 @@ export default function DashboardPage() {
           setStats({
             balance: walletData?.balance || 0,
             tournamentsPlayed: registrations.length,
-            totalKills: 0, // Placeholder
+            totalWithdrawn: walletData?.totalWithdrawn || 0,
             totalEarnings: walletData?.totalEarnings || 0
           });
         } catch (error) {
@@ -134,10 +136,10 @@ export default function DashboardPage() {
               icon: Trophy,
             },
             {
-              label: "Total Kills",
-              value: stats.totalKills.toString(),
-              sublabel: "",
-              icon: Target,
+              label: "Total Withdrawn",
+              value: stats.totalWithdrawn.toString(),
+              sublabel: "diamonds",
+              icon: ArrowUpFromLine,
             },
             {
               label: "Total Earnings",
@@ -222,7 +224,7 @@ function SiteHeader({ user, authReady }: SiteHeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const filteredNav = navLinks.filter((item) => {
-    if (item.label === "Dashboard" || item.label === "Wallet") {
+    if (item.label === "Dashboard" || item.label === "Wallet" || item.label === "Room Details") {
       return !!user;
     }
     return true;
@@ -406,12 +408,12 @@ function UserProfileBar({ user, balance }: UserProfileBarProps) {
             <button
               onClick={() => {
                 setOpen(false);
-                router.push("/tournaments");
+                router.push("/room-details");
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
             >
               <Users className="h-4 w-4" />
-              <span>My Tournaments</span>
+              <span>Room ID & Password</span>
             </button>
             <button
               onClick={() => {

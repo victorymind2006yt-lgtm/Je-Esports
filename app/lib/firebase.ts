@@ -1,12 +1,13 @@
 import { db } from "../firebase";
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
   deleteDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -78,13 +79,13 @@ export const createTournament = async (
 export const getTournaments = async (status?: TournamentStatus): Promise<Tournament[]> => {
   try {
     let q = query(collection(db, "tournaments"));
-    
+
     if (status) {
       q = query(collection(db, "tournaments"), where("status", "==", status));
     }
-    
+
     q = query(q, orderBy("startTime", "asc"));
-    
+
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
@@ -107,7 +108,7 @@ export const getTournamentById = async (id: string): Promise<Tournament | null> 
   try {
     const docRef = doc(db, "tournaments", id);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       const data = docSnap.data();
       return {
@@ -129,18 +130,18 @@ export const getTournamentById = async (id: string): Promise<Tournament | null> 
 export const updateTournament = async (id: string, updates: Partial<Tournament>) => {
   try {
     const tournamentRef = doc(db, "tournaments", id);
-    
+
     // Handle date conversions
     const updateData: any = { ...updates, updatedAt: serverTimestamp() };
-    
+
     if (updates.startTime) {
       updateData.startTime = toTimestamp(updates.startTime);
     }
-    
+
     if (updates.endTime) {
       updateData.endTime = toTimestamp(updates.endTime);
     }
-    
+
     await updateDoc(tournamentRef, updateData);
     return true;
   } catch (error) {
@@ -162,21 +163,67 @@ export const deleteTournament = async (id: string) => {
 // Player Registration operations
 export const registerPlayer = async (registration: Omit<PlayerRegistration, 'id' | 'registrationTime'>) => {
   try {
+    // Get tournament details to check entry fee
+    const tournament = await getTournamentById(registration.tournamentId);
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
+
+    const entryFee = tournament.entryFee || 0;
+
+    // If there's an entry fee, check and deduct from wallet
+    if (entryFee > 0) {
+      const walletRef = doc(db, "wallets", registration.userId);
+      const walletSnap = await getDoc(walletRef);
+
+      if (!walletSnap.exists()) {
+        throw new Error("Wallet not found. Please create a wallet first.");
+      }
+
+      const walletData = walletSnap.data();
+      const currentBalance = walletData.balance || 0;
+
+      // Check if user has sufficient balance
+      if (currentBalance < entryFee) {
+        throw new Error(`Insufficient balance. You need ${entryFee} diamonds but only have ${currentBalance} diamonds.`);
+      }
+
+      // Deduct entry fee from wallet
+      const newBalance = currentBalance - entryFee;
+      await setDoc(
+        walletRef,
+        {
+          balance: newBalance,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // Create transaction record
+      await addDoc(collection(db, "wallets", registration.userId, "transactions"), {
+        type: "tournament_entry",
+        amount: -entryFee,
+        tournamentId: registration.tournamentId,
+        tournamentName: tournament.name,
+        description: `Entry fee for ${tournament.name}`,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    // Create registration
     const registrationData = {
       ...registration,
+      entryFeePaid: entryFee,
       registrationTime: serverTimestamp()
     };
 
     const docRef = await addDoc(collection(db, "registrations"), registrationData);
-    
+
     // Update tournament registered slots count
-    const tournament = await getTournamentById(registration.tournamentId);
-    if (tournament) {
-      await updateTournament(registration.tournamentId, {
-        registeredSlots: tournament.registeredSlots + 1
-      });
-    }
-    
+    await updateTournament(registration.tournamentId, {
+      registeredSlots: tournament.registeredSlots + 1
+    });
+
     return { id: docRef.id, ...registration };
   } catch (error) {
     console.error("Error registering player:", error);
@@ -187,11 +234,11 @@ export const registerPlayer = async (registration: Omit<PlayerRegistration, 'id'
 export const getPlayerRegistrations = async (userId: string): Promise<PlayerRegistration[]> => {
   try {
     const q = query(
-      collection(db, "registrations"), 
+      collection(db, "registrations"),
       where("userId", "==", userId),
       orderBy("registrationTime", "desc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
@@ -210,11 +257,11 @@ export const getPlayerRegistrations = async (userId: string): Promise<PlayerRegi
 export const getTournamentRegistrations = async (tournamentId: string): Promise<PlayerRegistration[]> => {
   try {
     const q = query(
-      collection(db, "registrations"), 
+      collection(db, "registrations"),
       where("tournamentId", "==", tournamentId),
       orderBy("registrationTime", "asc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
@@ -233,7 +280,7 @@ export const getTournamentRegistrations = async (tournamentId: string): Promise<
 export const unregisterPlayer = async (registrationId: string, tournamentId: string) => {
   try {
     await deleteDoc(doc(db, "registrations", registrationId));
-    
+
     // Update tournament registered slots count
     const tournament = await getTournamentById(tournamentId);
     if (tournament) {
@@ -241,7 +288,7 @@ export const unregisterPlayer = async (registrationId: string, tournamentId: str
         registeredSlots: Math.max(0, tournament.registeredSlots - 1)
       });
     }
-    
+
     return true;
   } catch (error) {
     console.error("Error unregistering player:", error);
