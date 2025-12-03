@@ -10,4 +10,5 @@ const nextConfig = {
   },
 };
 
+// updated logo config
 module.exports = nextConfig;
