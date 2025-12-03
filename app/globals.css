@@ -38,7 +38,7 @@ body {
   background-color: #050708;
   background-image:
     linear-gradient(180deg, rgba(5, 7, 8, 0.7), rgba(5, 7, 8, 0.9)),
-    url("https://anyimage.io/storage/uploads/f65d964c159338ef85849b3f2a55c4e2");
+    url("/hero-bg.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

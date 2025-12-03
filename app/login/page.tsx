@@ -82,7 +82,7 @@ function LoginPageInner() {
         <div className="text-center">
           <div className="mx-auto mb-6 h-20 w-20 overflow-hidden rounded-full bg-[#0d1611]">
             <Image
-              src="https://anyimage.io/storage/uploads/ac072c2c761f68b87d0b8b44244ba360"
+              src="/logo.jpg"
               alt="JE Esports logo"
               width={80}
               height={80}

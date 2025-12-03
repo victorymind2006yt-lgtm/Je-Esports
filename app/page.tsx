@@ -141,7 +141,7 @@ function SiteHeader({ user, authReady }: SiteHeaderProps) {
         <Link href="/" className="flex items-center gap-3">
           <div className="h-12 w-12 overflow-hidden rounded-full bg-[#0d1611]">
             <Image
-              src="https://anyimage.io/storage/uploads/b876d0034821a9b733f61d5e3f56fb64"
+              src="/logo.jpg"
               alt="JE Esports logo"
               width={48}
               height={48}
@@ -307,7 +307,7 @@ function UserProfileBar({ user }: UserProfileBarProps) {
             </div>
             <div>
               <p className="text-xs font-semibold leading-tight text-white">{displayName}</p>
-              <p className="text-[10px] leading-tight text-muted break-all">{roleLabel} · {email}</p>
+              <p className="text-sm leading-tight text-muted break-all">{roleLabel} · {email}</p>
             </div>
           </div>
           <div className="space-y-1 text-sm text-muted">
@@ -425,7 +425,7 @@ function Hero() {
       id="hero"
       className="hero-card relative w-full overflow-hidden rounded-none px-4 py-16 text-center sm:px-12 lg:px-24"
       style={{
-        backgroundImage: 'url(https://anyimage.io/storage/uploads/2a9ca84f0b187c1e11ebab63668f1f7d)',
+        backgroundImage: 'url(/hero-bg.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

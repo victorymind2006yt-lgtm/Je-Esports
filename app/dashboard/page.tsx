@@ -236,7 +236,7 @@ function SiteHeader({ user, authReady }: SiteHeaderProps) {
         <Link href="/" className="flex items-center gap-3">
           <div className="h-12 w-12 overflow-hidden rounded-full bg-[#0d1611]">
             <Image
-              src="https://anyimage.io/storage/uploads/b876d0034821a9b733f61d5e3f56fb64"
+              src="/logo.jpg"
               alt="JE Esports logo"
               width={48}
               height={48}
