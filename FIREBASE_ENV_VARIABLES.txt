@@ -1,0 +1,20 @@
+# Firebase Environment Variables for JeeSports
+# Copy these to your .env.local file
+
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyATyNA6MI5y12_534jsMe5CYx0ySHDkP8I
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=je-esports-b48c0.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=je-esports-b48c0
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=je-esports-b48c0.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1072139571260
+NEXT_PUBLIC_FIREBASE_APP_ID=1:1072139571260:web:9bebdb61b99b2487beb339
+
+# Instructions:
+# 1. Create a file named .env.local in the root of your project
+# 2. Copy the above 6 lines (without the # comments) into that file
+# 3. Save the file
+
+# For Vercel Deployment:
+# Add each of these as Environment Variables in Vercel with:
+# - Production: ✓
+# - Preview: ✓
+# - Development: ✓

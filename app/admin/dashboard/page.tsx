@@ -1297,9 +1297,12 @@ export default function AdminDashboardPage() {
                                 <button
                                   onClick={() => {
                                     handleOpenPrizeDistribution(tournament);
-                                    // Also update status to awaiting_payout if it's not already paid
-                                    if (tournament.status !== 'paid' && tournament.status !== 'awaiting_payout') {
-                                      handleTournamentStatusChange(tournament.id, 'awaiting_payout');
+
+                                    if (
+                                      tournament.status !== "paid" &&
+                                      tournament.status !== "awaiting_payout"
+                                    ) {
+                                      handleTournamentStatusChange(tournament.id, "awaiting_payout");
                                     }
                                   }}
                                   className="flex w-full items-center px-4 py-2 text-xs text-white hover:bg-white/5"
