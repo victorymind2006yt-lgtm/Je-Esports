@@ -182,6 +182,12 @@ export default function AdminDashboardPage() {
   const [participantsList, setParticipantsList] = useState<PlayerRegistration[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
 
+  // Balance Edit State
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [selectedUserForBalance, setSelectedUserForBalance] = useState<WalletUserSummary | null>(null);
+  const [balanceAdjustment, setBalanceAdjustment] = useState("");
+  const [balanceAction, setBalanceAction] = useState<"add" | "subtract">("add");
+
 
 
   const router = useRouter();
@@ -989,6 +995,74 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleOpenBalanceModal = (user: WalletUserSummary) => {
+    setSelectedUserForBalance(user);
+    setBalanceAdjustment("");
+    setBalanceAction("add");
+    setUserActionId(null); // Close dropdown
+    setShowBalanceModal(true);
+  };
+
+  const handleUpdateBalance = async () => {
+    if (!selectedUserForBalance || !balanceAdjustment) return;
+
+    const amount = Number(balanceAdjustment);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid positive amount.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${balanceAction} ${amount} diamonds ${balanceAction === "add" ? "to" : "from"} ${selectedUserForBalance.displayName}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const walletRef = doc(db, "wallets", selectedUserForBalance.id);
+      const walletSnap = await getDoc(walletRef);
+
+      if (!walletSnap.exists()) {
+        alert("User wallet not found");
+        return;
+      }
+
+      const currentData = walletSnap.data();
+      const currentBalance = currentData.balance ?? 0;
+
+      let newBalance = currentBalance;
+      if (balanceAction === "add") {
+        newBalance += amount;
+      } else {
+        newBalance -= amount;
+      }
+
+      await setDoc(walletRef, {
+        balance: newBalance
+      }, { merge: true });
+
+      // Log transaction
+      await addDoc(collection(db, `wallets/${selectedUserForBalance.id}/transactions`), {
+        type: "admin_adjustment",
+        amount: amount,
+        action: balanceAction,
+        description: `Admin ${balanceAction === "add" ? "added" : "deducted"} balance`,
+        adminId: currentUser?.uid,
+        createdAt: serverTimestamp()
+      });
+
+      // Update local state
+      setWalletUsers(prev => prev.map(u =>
+        u.id === selectedUserForBalance.id ? { ...u, balance: newBalance } : u
+      ));
+
+      alert("Balance updated successfully!");
+      setShowBalanceModal(false);
+    } catch (error) {
+      console.error("Failed to update balance", error);
+      alert("Failed to update balance. Please try again.");
+    }
+  };
+
   if (!authReady || !currentUser || !isAdmin) {
     return (
       <div className="global-bg flex min-h-screen items-center justify-center px-4 text-white">
@@ -1518,6 +1592,14 @@ export default function AdminDashboardPage() {
                                       Grant Admin
                                     </button>
                                   )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenBalanceModal(userSummary)}
+                                    className="w-full px-4 py-2 text-left text-xs text-white transition hover:bg-emerald-500/10"
+                                  >
+                                    <Coins className="mr-2 inline h-3 w-3" />
+                                    Edit Balance
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2409,6 +2491,63 @@ export default function AdminDashboardPage() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBalanceModal && selectedUserForBalance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0a0f0d] p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-white">Edit Balance</h3>
+            <p className="mt-1 text-sm text-muted">
+              Adjusting balance for <span className="text-emerald-300">{selectedUserForBalance.displayName}</span>
+            </p>
+            <p className="text-xs text-muted">Current Balance: {selectedUserForBalance.balance} 💎</p>
+
+            <div className="mt-6 space-y-4">
+              <div className="flex gap-2 rounded-xl bg-black/40 p-1">
+                <button
+                  onClick={() => setBalanceAction("add")}
+                  className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${balanceAction === "add" ? "bg-emerald-500 text-black" : "text-muted hover:text-white"
+                    }`}
+                >
+                  Add (+)
+                </button>
+                <button
+                  onClick={() => setBalanceAction("subtract")}
+                  className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${balanceAction === "subtract" ? "bg-red-500 text-white" : "text-muted hover:text-white"
+                    }`}
+                >
+                  Subtract (-)
+                </button>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Amount</label>
+                <input
+                  type="number"
+                  value={balanceAdjustment}
+                  onChange={(e) => setBalanceAdjustment(e.target.value)}
+                  placeholder="Enter amount..."
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowBalanceModal(false)}
+                  className="flex-1 rounded-xl bg-white/5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateBalance}
+                  className="flex-1 rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400"
+                >
+                  Update Balance
+                </button>
+              </div>
             </div>
           </div>
         </div>
