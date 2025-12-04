@@ -58,7 +58,7 @@ function LoginPageInner() {
 
       // Redirect after 1 second
       setTimeout(() => {
-        if (redirect && isAdminEmail) {
+        if (redirect) {
           router.push(redirect);
         } else if (isAdminEmail) {
           router.push("/admin/dashboard");
