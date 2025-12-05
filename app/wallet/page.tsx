@@ -455,6 +455,15 @@ export default function WalletPage() {
       } as const;
     }
 
+    if (paymentMethod === "jazzcash") {
+      return {
+        accountNameLabel: "Account Name",
+        accountNameValue: "Shagu*** Rafi",
+        accountNumberLabel: "JazzCash Number",
+        accountNumberValue: "03185358454",
+      } as const;
+    }
+
     if (paymentMethod === "easypaisa") {
       return {
         accountNameLabel: "Account Name",
