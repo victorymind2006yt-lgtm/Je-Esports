@@ -50,7 +50,8 @@ type PaymentMethod =
   | "jazzcash"
   | "easypaisa"
   | "sadapay"
-  | "nayapay";
+  | "nayapay"
+  | "upaisa";
 
 export default function WalletPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -464,6 +465,15 @@ export default function WalletPage() {
       } as const;
     }
 
+    if (paymentMethod === "upaisa") {
+      return {
+        accountNameLabel: "Account Name",
+        accountNameValue: "Shagu*** Rafi",
+        accountNumberLabel: "Upaisa Number",
+        accountNumberValue: "03185358454",
+      } as const;
+    }
+
     if (paymentMethod === "easypaisa") {
       return {
         accountNameLabel: "Account Name",
@@ -665,6 +675,7 @@ export default function WalletPage() {
                       <option value="bank_transfer">Bank Transfer</option>
                       <option value="jazzcash">JazzCash</option>
                       <option value="easypaisa">Easypaisa</option>
+                      <option value="upaisa">Upaisa</option>
                       <option value="sadapay">SadaPay</option>
                       <option value="nayapay">NayaPay</option>
                     </select>
@@ -801,6 +812,7 @@ export default function WalletPage() {
                     <option value="">Select where to send funds</option>
                     <option value="jazzcash">JazzCash</option>
                     <option value="easypaisa">Easypaisa</option>
+                    <option value="upaisa">Upaisa</option>
                     <option value="sadapay">SadaPay</option>
                     <option value="nayapay">NayaPay</option>
                   </select>
