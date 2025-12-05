@@ -98,6 +98,24 @@ function TournamentsPageInner() {
     return () => clearInterval(timer);
   }, []);
 
+  const filterCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: tournaments.length,
+      "per-kill": 0,
+      survival: 0,
+      "clash-squad": 0,
+      "lone-wolf": 0,
+    };
+
+    tournaments.forEach((t) => {
+      if (t.type && counts[t.type] !== undefined) {
+        counts[t.type]++;
+      }
+    });
+
+    return counts;
+  }, [tournaments]);
+
   const handleFilterClick = (value: string) => {
     setActiveFilter(value);
     if (value === "all") {
@@ -163,7 +181,7 @@ function TournamentsPageInner() {
                 >
                   <Filter className="h-4 w-4" />
                   {filter.label}
-                  <span className="text-xs">0</span>
+                  <span className="text-xs">{filterCounts[filter.value] || 0}</span>
                 </button>
               ))}
             </div>
