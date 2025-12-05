@@ -160,13 +160,18 @@ export default function WalletPage() {
       return;
     }
 
+    if (type === "deposit" && value < 20) {
+      setError("Minimum deposit is 20 diamonds.");
+      return;
+    }
+
     if (type === "deposit" && !depositScreenshotFile) {
       setError("Please upload a screenshot of your payment.");
       return;
     }
 
-    if (type === "withdraw" && value < 25) {
-      setError("Minimum withdrawal is 25 diamonds.");
+    if (type === "withdraw" && value < 50) {
+      setError("Minimum withdrawal is 50 diamonds.");
       return;
     }
 
@@ -527,8 +532,8 @@ export default function WalletPage() {
               type="button"
               onClick={() => setActiveTab("deposit")}
               className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "deposit"
-                  ? "bg-emerald-500 text-black"
-                  : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
+                ? "bg-emerald-500 text-black"
+                : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
                 }`}
             >
               <ArrowDownToLine className="h-4 w-4" />
@@ -538,8 +543,8 @@ export default function WalletPage() {
               type="button"
               onClick={() => setActiveTab("withdraw")}
               className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "withdraw"
-                  ? "bg-emerald-500 text-black"
-                  : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
+                ? "bg-emerald-500 text-black"
+                : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
                 }`}
             >
               <ArrowUpFromLine className="h-4 w-4" />
@@ -549,8 +554,8 @@ export default function WalletPage() {
               type="button"
               onClick={() => setActiveTab("history")}
               className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "history"
-                  ? "bg-emerald-500 text-black"
-                  : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
+                ? "bg-emerald-500 text-black"
+                : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
                 }`}
             >
               <History className="h-4 w-4" />
@@ -560,8 +565,8 @@ export default function WalletPage() {
               type="button"
               onClick={() => setActiveTab("redeem")}
               className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-2 font-semibold transition ${activeTab === "redeem"
-                  ? "bg-emerald-500 text-black"
-                  : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
+                ? "bg-emerald-500 text-black"
+                : "bg-transparent text-muted hover:bg-white/5 hover:text-white"
                 }`}
             >
               <History className="h-4 w-4" />
@@ -655,7 +660,7 @@ export default function WalletPage() {
                     </label>
                     <input
                       type="number"
-                      min={1}
+                      min={20}
                       value={depositAmount}
                       onChange={(event) =>
                         setDepositAmount(event.target.value)
@@ -663,6 +668,7 @@ export default function WalletPage() {
                       placeholder="Enter amount you sent"
                       className="w-full rounded-lg bg-[#05080b] px-3 py-2 text-xs text-white outline-none ring-1 ring-white/10 focus:ring-emerald-500/70"
                     />
+                    <p className="text-[10px] text-muted">Minimum deposit: 20 diamonds</p>
                   </div>
 
                   <div className="space-y-1">
@@ -737,7 +743,7 @@ export default function WalletPage() {
               </p>
               <p className="mt-1 text-xs text-muted">
                 Request a withdrawal to your bank account or mobile wallet.
-                Minimum withdrawal is 25 diamonds.
+                Minimum withdrawal is 50 diamonds.
               </p>
 
               <div className="mt-4 space-y-4 text-xs">
@@ -747,7 +753,7 @@ export default function WalletPage() {
                   </label>
                   <input
                     type="number"
-                    min={1}
+                    min={50}
                     value={withdrawAmount}
                     onChange={(event) => setWithdrawAmount(event.target.value)}
                     placeholder="Enter amount in diamonds"
@@ -925,8 +931,8 @@ export default function WalletPage() {
                       </div>
                       <p
                         className={`font-semibold ${tx.type === "deposit"
-                            ? "text-emerald-300"
-                            : "text-red-300"
+                          ? "text-emerald-300"
+                          : "text-red-300"
                           }`}
                       >
                         {tx.type === "withdraw" ? "-" : "+"}
