@@ -54,6 +54,7 @@ import {
   Upload,
   Coins,
   Lock,
+  RefreshCw,
 } from "lucide-react";
 
 import { auth, db } from "../../firebase";
@@ -438,6 +439,33 @@ export default function AdminDashboardPage() {
       </div>
     );
   }
+
+  const handleRefreshUsers = async () => {
+    try {
+      setLoadingOverview(true);
+      const walletSnap = await getDocs(collection(db, "wallets"));
+      const walletSummaries: WalletUserSummary[] = walletSnap.docs.map(
+        (docSnap) => {
+          const data = docSnap.data() as any;
+          return {
+            id: docSnap.id,
+            displayName: data.displayName ?? "Player",
+            email: data.email ?? "",
+            balance: data.balance ?? 0,
+            totalDeposited: data.totalDeposited ?? 0,
+            totalWithdrawn: data.totalWithdrawn ?? 0,
+            totalEarnings: data.totalEarnings ?? 0,
+          };
+        },
+      );
+      setWalletUsers(walletSummaries);
+    } catch (error) {
+      console.error("Failed to refresh users", error);
+      alert("Failed to refresh users.");
+    } finally {
+      setLoadingOverview(false);
+    }
+  };
 
   const handleCreateRedeemCode = async () => {
     const value = Number(redeemAmount);
@@ -1488,8 +1516,19 @@ export default function AdminDashboardPage() {
                 Manage all registered users and their wallets.
               </p>
             </div>
-            <div className="text-[11px] text-muted">
-              Total users: <span className="font-semibold">{walletUsers.length}</span>
+            <div className="flex items-center gap-3">
+              <div className="text-[11px] text-muted">
+                Total users: <span className="font-semibold">{walletUsers.length}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRefreshUsers}
+                disabled={loadingOverview}
+                className="rounded-full bg-emerald-500/10 p-2 text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                title="Force Refresh Users"
+              >
+                <RefreshCw className={`h-4 w-4 ${loadingOverview ? "animate-spin" : ""}`} />
+              </button>
             </div>
           </div>
 
