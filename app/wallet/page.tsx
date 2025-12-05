@@ -24,6 +24,7 @@ import {
   CreditCard,
   Gem,
   History,
+  AlertCircle,
 } from "lucide-react";
 
 import { auth, db } from "../firebase";
@@ -577,16 +578,22 @@ export default function WalletPage() {
 
         {activeTab === "deposit" && (
           <>
-            <section className="rounded-3xl bg-[#080f0c] px-6 py-5 text-sm">
-              <p className="text-sm font-semibold text-white">How It Works</p>
-              <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-muted">
-                <li>Choose a payment method below.</li>
-                <li>Send your payment using the account details in Step 1.</li>
-                <li>
-                  Fill out the form in Step 2 so our team can verify your
-                  payment.
-                </li>
-              </ol>
+            <section className="relative overflow-hidden rounded-3xl border border-red-500/30 bg-gradient-to-br from-red-950/90 to-red-900/90 px-6 py-6 shadow-[0_0_30px_rgba(220,38,38,0.2)]">
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 text-white mb-4">
+                  <AlertCircle className="h-5 w-5 text-red-400" />
+                  <h3 className="text-lg font-bold tracking-wide">How It Works</h3>
+                </div>
+                <ol className="list-decimal space-y-3 pl-5 text-sm font-medium text-red-100">
+                  <li>Choose a payment method below.</li>
+                  <li>Send your payment using the account details in <span className="font-bold text-white underline decoration-red-400 underline-offset-2">Step 1</span>.</li>
+                  <li>
+                    Fill out the form in <span className="font-bold text-white underline decoration-red-400 underline-offset-2">Step 2</span> so our team can verify your payment.
+                  </li>
+                </ol>
+              </div>
+              {/* Decorative background element */}
+              <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-red-500/10 blur-3xl" />
             </section>
 
             <section className="space-y-4 rounded-3xl bg-[#080f0c] px-6 py-5 text-sm">
