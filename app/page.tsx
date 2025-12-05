@@ -113,10 +113,11 @@ export default function Home() {
     <div className="min-h-screen text-white">
       <SiteHeader user={currentUser} authReady={authReady} />
       {authReady && currentUser ? <UserProfileBar user={currentUser} /> : null}
-      <Hero />
+
+      <Hero user={currentUser} />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-4 pb-24 pt-10 lg:px-10">
-        <HowItWorks />
-        <BrowseTournaments activeTab={activeTab} onTabChange={setActiveTab} />
+        <HowItWorks user={currentUser} />
+        <BrowseTournaments activeTab={activeTab} onTabChange={setActiveTab} user={currentUser} />
       </div>
       <footer className="border-t border-white/10 py-6 text-center text-xs text-muted">
         <p>© 2025 JE Esports. All rights reserved.</p>
@@ -399,7 +400,7 @@ function UserProfileBar({ user }: UserProfileBarProps) {
   );
 }
 
-function Hero() {
+function Hero({ user }: { user: User | null }) {
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
@@ -473,14 +474,14 @@ function Hero() {
           <Stats />
           <div className="flex flex-wrap items-center justify-center gap-5">
             <Link
-              href="/tournaments"
+              href={user ? "/tournaments" : "/login?redirect=/tournaments"}
               className="flex items-center gap-2 rounded-full bg-[#14cc6f] px-8 py-4 text-lg font-semibold text-black transition hover:bg-[#0fa75b]"
             >
               Join Tournament Now
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/tournaments"
+              href={user ? "/tournaments" : "/login?redirect=/tournaments"}
               className="rounded-full border border-white/15 px-8 py-4 text-lg font-semibold text-white shadow-[0_0_20px_rgba(16,185,129,0.15)] transition hover:border-emerald-400/50 hover:text-emerald-100 hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
             >
               View Leaderboard
@@ -534,7 +535,7 @@ function Stats() {
   );
 }
 
-function HowItWorks() {
+function HowItWorks({ user }: { user: User | null }) {
   return (
     <section className="panel-dark grid gap-10 rounded-[28px] px-6 py-12 lg:grid-cols-[1.1fr_0.9fr]">
       <div className="space-y-6">
@@ -599,7 +600,7 @@ function HowItWorks() {
           ))}
         </div>
         <Link
-          href="/tournaments"
+          href={user ? "/tournaments" : "/login?redirect=/tournaments"}
           className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-[#14cc6f] px-4 py-3 text-base font-semibold text-black transition hover:bg-[#0fa75b]"
         >
           Join Now
@@ -615,7 +616,7 @@ type BrowseTournamentsProps = {
   onTabChange: (tab: (typeof tournamentTabs)[number]) => void;
 };
 
-function BrowseTournaments({ activeTab, onTabChange }: BrowseTournamentsProps) {
+function BrowseTournaments({ activeTab, onTabChange, user }: BrowseTournamentsProps & { user: User | null }) {
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -838,7 +839,7 @@ function BrowseTournaments({ activeTab, onTabChange }: BrowseTournamentsProps) {
                 </div>
 
                 <Link
-                  href={`/tournaments/${tournament.id}`}
+                  href={user ? `/tournaments/${tournament.id}` : `/login?redirect=/tournaments/${tournament.id}`}
                   className={`mt-4 inline-flex items-center justify-center rounded-full px-6 py-2 text-center text-sm font-semibold transition ${isCancelled
                     ? "cursor-not-allowed bg-[#111111] text-white/40"
                     : isJoinable && !isFull

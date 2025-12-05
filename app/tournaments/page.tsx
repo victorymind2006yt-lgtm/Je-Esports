@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarClock, Gem, Filter, List, Search, Tag, Users, ArrowLeft } from "lucide-react";
 
 import { getTournaments } from "../lib/firebase";
+import { auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import type { Tournament, TournamentType } from "../lib/types";
 
 const filters = [
@@ -45,6 +47,18 @@ function TournamentsPageInner() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthReady(true);
+      if (!user) {
+        router.push("/login?redirect=/tournaments");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   useEffect(() => {
     const load = async () => {
@@ -148,6 +162,17 @@ function TournamentsPageInner() {
       return "-";
     }
   };
+
+  if (!authReady) {
+    return (
+      <div className="global-bg min-h-screen px-0 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
+          <p className="mt-4 text-muted">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="global-bg min-h-screen px-0 text-white">
