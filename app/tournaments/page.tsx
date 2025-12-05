@@ -138,7 +138,7 @@ function TournamentsPageInner() {
           <div>
             <Link
               href="/"
-              className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-white transition-colors"
+              className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Home
@@ -157,8 +157,8 @@ function TournamentsPageInner() {
                   key={filter.value}
                   onClick={() => handleFilterClick(filter.value)}
                   className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-base font-semibold transition ${activeFilter === filter.value
-                      ? "bg-[#14cc6f] text-black"
-                      : "bg-[#111111] text-white/70"
+                    ? "bg-[#14cc6f] text-black"
+                    : "bg-[#111111] text-white/70"
                     }`}
                 >
                   <Filter className="h-4 w-4" />
@@ -317,10 +317,10 @@ function TournamentsPageInner() {
                   <Link
                     href={`/tournaments/${tournament.id}`}
                     className={`mt-4 inline-flex items-center justify-center rounded-full px-6 py-2 text-center text-sm font-semibold transition ${isCancelled
-                        ? "cursor-not-allowed bg-[#111111] text-white/40"
-                        : isJoinable && !isFull
-                          ? "bg-[#14cc6f] text-black hover:bg-[#0fa75b]"
-                          : "bg-[#111111] text-white/80"
+                      ? "cursor-not-allowed bg-[#111111] text-white/40"
+                      : isJoinable && !isFull
+                        ? "bg-[#14cc6f] text-black hover:bg-[#0fa75b]"
+                        : "bg-[#111111] text-white/80"
                       }`}
                   >
                     {isCancelled
