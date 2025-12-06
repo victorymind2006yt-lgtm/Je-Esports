@@ -1,4 +1,4 @@
-export type TournamentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled' | 'awaiting_payout' | 'paid';
+export type TournamentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled' | 'awaiting_payout' | 'paid' | 'deleted';
 
 export type TournamentMode = 'solo' | 'duo' | 'squad' | 'clash-squad';
 

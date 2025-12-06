@@ -152,7 +152,11 @@ export const updateTournament = async (id: string, updates: Partial<Tournament>)
 
 export const deleteTournament = async (id: string) => {
   try {
-    await deleteDoc(doc(db, "tournaments", id));
+    // Soft delete: update status to 'deleted' instead of removing the document
+    await updateDoc(doc(db, "tournaments", id), {
+      status: 'deleted' as TournamentStatus,
+      updatedAt: serverTimestamp()
+    });
     return true;
   } catch (error) {
     console.error("Error deleting tournament:", error);

@@ -396,11 +396,11 @@ export default function AdminDashboardPage() {
 
         setOverview({
           totalUsers,
-          totalTournaments,
-          totalRevenue,
+          totalTournaments: tournaments.filter((t) => t.status !== "deleted").length,
+          totalRevenue, // Revenue includes deleted tournaments
           totalMatches,
         });
-        setTournamentsData(tournaments);
+        setTournamentsData(tournaments.filter((t) => t.status !== "deleted"));
         setWalletUsers(walletSummaries);
         setTransactions(allTransactions);
         setDbStatus("online");

@@ -65,7 +65,8 @@ function TournamentsPageInner() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getTournaments();
+        const rawData = await getTournaments();
+        const data = rawData.filter((t) => t.status !== "deleted");
 
         // Check tournament states based on current time
         const updatedData = data.map(tournament => {
