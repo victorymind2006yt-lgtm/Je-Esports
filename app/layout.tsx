@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description:
     "Join Free Fire tournaments, manage wallets, and dominate leaderboards on JE Esports.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/tab-logo.png",
   },
 };
 
