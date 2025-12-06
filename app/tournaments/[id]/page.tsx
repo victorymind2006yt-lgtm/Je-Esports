@@ -46,6 +46,7 @@ export default function TournamentDetailPage() {
     "participants",
   );
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [showLowBalanceModal, setShowLowBalanceModal] = useState(false);
   const [now, setNow] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -154,9 +155,13 @@ export default function TournamentDetailPage() {
           registeredSlots: tournament.registeredSlots + 1,
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Registration error:", err);
-      setError("Failed to register for tournament. Please try again.");
+      if (err.message && err.message.includes("Insufficient balance")) {
+        setShowLowBalanceModal(true);
+      } else {
+        setError("Failed to register for tournament. Please try again.");
+      }
     } finally {
       setRegistering(false);
     }
@@ -279,10 +284,10 @@ export default function TournamentDetailPage() {
   const statusPillLabel = isUpcoming
     ? "Upcoming"
     : isOngoing
-    ? "Live"
-    : isCompleted
-    ? "Past"
-    : "Cancelled";
+      ? "Live"
+      : isCompleted
+        ? "Past"
+        : "Cancelled";
 
   const diffToStartMs = tournament.startTime.getTime() - now.getTime();
   const hasStarted = diffToStartMs <= 0;
@@ -688,6 +693,43 @@ export default function TournamentDetailPage() {
           </aside>
         </div>
       </div>
-    </div>
+
+      {/* Low Balance Modal */}
+      {
+        showLowBalanceModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-3xl border border-red-500/20 bg-[#080f0c] p-6 shadow-2xl">
+              <div className="flex flex-col items-center text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 mb-4">
+                  <AlertCircle className="h-6 w-6 text-red-500" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">
+                  Not Enough Balance
+                </h3>
+                <p className="text-sm text-muted mb-6">
+                  You don't have enough diamonds to join this tournament. Please deposit funds to continue.
+                </p>
+
+                <div className="flex flex-col w-full gap-3">
+                  <Link
+                    href="/wallet"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400"
+                  >
+                    <Gem className="h-4 w-4" />
+                    Deposit Funds
+                  </Link>
+                  <button
+                    onClick={() => setShowLowBalanceModal(false)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 }
