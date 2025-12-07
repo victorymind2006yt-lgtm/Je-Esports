@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "../firebase";
 import { getPlayerRegistrations } from "../lib/firebase";
+import Cropper from "react-easy-crop";
+import { getCroppedImg } from "../../lib/imageUtils";
 
 import {
   ArrowRight,
@@ -25,8 +28,12 @@ import {
   Trophy,
   History,
   Menu,
+  Camera,
+  X,
+  Check,
+  Loader2,
 } from "lucide-react";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { onAuthStateChanged, signOut, updateProfile, type User } from "firebase/auth";
 import { auth } from "../firebase";
 
 const navLinks = [
@@ -56,9 +63,18 @@ export default function DashboardPage() {
     balance: 0,
     tournamentsPlayed: 0,
     totalWithdrawn: 0,
-    totalEarnings: 0
+    totalEarnings: 0,
+    photoURL: ""
   });
   const router = useRouter();
+
+  // Cropping State
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -88,7 +104,8 @@ export default function DashboardPage() {
             balance: walletData?.balance || 0,
             tournamentsPlayed: registrations.length,
             totalWithdrawn: walletData?.totalWithdrawn || 0,
-            totalEarnings: walletData?.totalEarnings || 0
+            totalEarnings: walletData?.totalEarnings || 0,
+            photoURL: walletData?.photoURL || currentUser.photoURL || ""
           });
         } catch (error) {
           console.error("Error fetching dashboard stats:", error);
@@ -97,6 +114,71 @@ export default function DashboardPage() {
       fetchStats();
     }
   }, [currentUser]);
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const imageDataUrl = await readFile(file);
+      setImageSrc(imageDataUrl as string);
+      setShowCropModal(true);
+      // Reset input value to allow selecting same file again
+      e.target.value = '';
+    }
+  };
+
+  const readFile = (file: File) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => resolve(reader.result), false);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!imageSrc || !croppedAreaPixels || !currentUser) return;
+
+    try {
+      setUploadingPhoto(true);
+      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+
+      if (!croppedImage) {
+        throw new Error("Failed to crop image");
+      }
+
+      // Upload to Firebase Storage
+      const storageRef = ref(storage, `profile_photos/${currentUser.uid}`);
+      await uploadBytes(storageRef, croppedImage);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Update Auth Profile
+      await updateProfile(currentUser, { photoURL: downloadURL });
+
+      // Update Firestore
+      await setDoc(doc(db, "wallets", currentUser.uid), {
+        photoURL: downloadURL
+      }, { merge: true });
+
+      // Update local state
+      setStats(prev => ({ ...prev, photoURL: downloadURL }));
+      setShowCropModal(false);
+      setImageSrc(null);
+
+    } catch (e) {
+      console.error("Failed to upload photo", e);
+      alert("Failed to upload photo. Please try again.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleCloseCrop = () => {
+    setShowCropModal(false);
+    setImageSrc(null);
+  };
 
   const displayName =
     currentUser?.displayName || currentUser?.email?.split("@")[0] || "Player";
@@ -111,15 +193,108 @@ export default function DashboardPage() {
       {authReady && currentUser ? <UserProfileBar user={currentUser} balance={stats.balance} /> : null}
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-24 pt-8 lg:px-10">
-        <section className="rounded-3xl bg-[#080f0c] px-6 py-6 sm:flex sm:items-center sm:gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-2xl font-semibold text-emerald-300">
-            {initial}
+        <section className="rounded-3xl bg-[#080f0c] px-6 py-6 sm:flex sm:items-center sm:gap-6">
+          <div className="relative group">
+            <div className={`h-20 w-20 overflow-hidden rounded-full border-2 border-emerald-500/20 bg-[#0d1611] flex items-center justify-center ${!stats.photoURL ? 'text-emerald-300' : ''}`}>
+              {stats.photoURL ? (
+                <Image
+                  src={stats.photoURL}
+                  alt={displayName}
+                  width={80}
+                  height={80}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-3xl font-semibold">{initial}</span>
+              )}
+            </div>
+
+            <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+              <Camera className="h-6 w-6 text-white" />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onFileChange}
+              />
+            </label>
+
+            {uploadingPhoto && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/70">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+              </div>
+            )}
           </div>
+
           <div className="mt-4 sm:mt-0">
-            <p className="text-lg font-semibold text-white">{displayName}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xl font-bold text-white">{displayName}</p>
+              {stats.photoURL && <ShieldCheck className="h-4 w-4 text-emerald-400" />}
+            </div>
             <p className="text-sm text-muted">{handle}</p>
+            <p className="mt-2 text-xs text-muted/60">Click photo to update profile picture</p>
           </div>
         </section>
+
+        {/* Crop Modal */}
+        {showCropModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-[#1a1a1a]">
+              <div className="relative h-64 w-full bg-black">
+                <Cropper
+                  image={imageSrc || ""}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                  showGrid={false}
+                />
+              </div>
+
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-white">Zoom</span>
+                  <span className="text-xs text-muted">{Math.round(zoom * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  aria-labelledby="Zoom"
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="mt-2 h-1 w-full appearance-none rounded-full bg-white/20 outline-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+                />
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={handleCloseCrop}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                    disabled={uploadingPhoto}
+                  >
+                    <X className="h-4 w-4" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUploadPhoto}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400"
+                    disabled={uploadingPhoto}
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                    Save Photo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="grid gap-4 md:grid-cols-4">
           {[
@@ -365,15 +540,23 @@ function UserProfileBar({ user, balance }: UserProfileBarProps) {
         className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-semibold text-emerald-300 shadow-md cursor-pointer"
         aria-label="Open profile menu"
       >
-        {initial}
+        {user.photoURL ? (
+          <img src={user.photoURL} alt={displayName} className="h-full w-full rounded-full object-cover" />
+        ) : (
+          initial
+        )}
       </button>
 
       {open ? (
         <div className="mt-3 w-64 rounded-2xl border border-white/10 bg-[#050a0f] p-4 shadow-xl">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
-              {initial}
-            </div>
+            {user.photoURL ? (
+              <img src={user.photoURL} alt={displayName} className="h-9 w-9 rounded-full object-cover border border-emerald-500/20" />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
+                {initial}
+              </div>
+            )}
             <div>
               <p className="text-xs font-semibold leading-tight text-white">{displayName}</p>
               <p className="text-[10px] leading-tight text-muted break-all">{roleLabel} · {email}</p>

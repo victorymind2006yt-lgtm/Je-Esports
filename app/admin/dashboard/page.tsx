@@ -16,6 +16,7 @@ import {
   setDoc,
   serverTimestamp,
   addDoc,
+  increment,
 } from "firebase/firestore";
 import {
   LayoutDashboard,
@@ -954,6 +955,29 @@ export default function AdminDashboardPage() {
           tournamentName: selectedTournamentForPrizes.name,
           createdAt: serverTimestamp(),
         });
+
+        // Update Weekly Leaderboard
+        try {
+          const now = new Date();
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          const pastDaysOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+          const weekNum = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+          const weekId = `${now.getFullYear()}_${weekNum}`;
+
+          const leaderboardRef = doc(db, "weeklyLeaderboard", `${weekId}_${winner.userId}`);
+          await setDoc(leaderboardRef, {
+            weekId,
+            userId: winner.userId,
+            displayName: userName,
+            userPhotoURL: participant?.userPhotoURL || null,
+            wins: increment(1),
+            diamondsWon: increment(amount),
+            lastUpdated: serverTimestamp()
+          }, { merge: true });
+        } catch (err) {
+          console.error("Failed to update leaderboard", err);
+          // Don't block the main flow if leaderboard update fails
+        }
       }
 
       // Update tournament status to paid

@@ -132,6 +132,7 @@ export default function TournamentDetailPage() {
         userId: currentUser.uid,
         userName: currentUser.displayName || currentUser.email?.split("@")[0] || "Player",
         userEmail: currentUser.email || "",
+        userPhotoURL: currentUser.photoURL || undefined,
         tournamentId: tournament.id,
         slotNumber,
       });
@@ -460,7 +461,12 @@ export default function TournamentDetailPage() {
                                 <span className="text-[10px] uppercase tracking-[0.18em] text-white/50">
                                   Slot {slotNumber}
                                 </span>
-                                <span className="mt-1 text-xs font-semibold">
+                                {isTaken && slotReg?.userPhotoURL ? (
+                                  <div className="mt-1 h-6 w-6 overflow-hidden rounded-full border border-white/20">
+                                    <img src={slotReg.userPhotoURL} alt={slotReg.userName} className="h-full w-full object-cover" />
+                                  </div>
+                                ) : null}
+                                <span className="mt-1 text-xs font-semibold truncate w-full text-center px-1">
                                   {isYou
                                     ? "You"
                                     : isTaken

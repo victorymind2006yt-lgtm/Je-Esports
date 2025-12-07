@@ -295,17 +295,25 @@ function UserProfileBar({ user }: UserProfileBarProps) {
         <span className="text-sm font-semibold text-white min-w-[40px] text-center">
           {loadingBalance ? "..." : balance}
         </span>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-semibold text-emerald-300">
-          {initial}
-        </div>
+        {user.photoURL ? (
+          <img src={user.photoURL} alt={displayName} className="h-8 w-8 rounded-full object-cover border border-emerald-500/20" />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-xs font-semibold text-emerald-300">
+            {initial}
+          </div>
+        )}
       </button>
 
       {open ? (
         <div className="mt-3 w-64 rounded-2xl border border-white/10 bg-[#050a0f] p-4 shadow-xl">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
-              {initial}
-            </div>
+            {user.photoURL ? (
+              <img src={user.photoURL} alt={displayName} className="h-9 w-9 rounded-full object-cover border border-emerald-500/20" />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
+                {initial}
+              </div>
+            )}
             <div>
               <p className="text-xs font-semibold leading-tight text-white">{displayName}</p>
               <p className="text-sm leading-tight text-muted break-all">{roleLabel} · {email}</p>
