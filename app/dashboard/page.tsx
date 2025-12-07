@@ -169,7 +169,7 @@ export default function DashboardPage() {
 
     } catch (e) {
       console.error("Failed to upload photo", e);
-      alert("Failed to upload photo. Please try again.");
+      alert(`Failed to upload photo: ${(e as Error).message}`);
     } finally {
       setUploadingPhoto(false);
     }

@@ -489,7 +489,7 @@ function Hero({ user }: { user: User | null }) {
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href={user ? "/tournaments" : "/login?redirect=/tournaments"}
+              href="/leaderboard"
               className="rounded-full border border-white/15 px-8 py-4 text-lg font-semibold text-white shadow-[0_0_20px_rgba(16,185,129,0.15)] transition hover:border-emerald-400/50 hover:text-emerald-100 hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
             >
               View Leaderboard
