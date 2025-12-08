@@ -161,7 +161,7 @@ export default function TournamentDetailPage() {
       if (err.message && err.message.includes("Insufficient balance")) {
         setShowLowBalanceModal(true);
       } else {
-        setError("Failed to register for tournament. Please try again.");
+        setError(err instanceof Error ? err.message : "Failed to register for tournament. Please try again.");
       }
     } finally {
       setRegistering(false);
