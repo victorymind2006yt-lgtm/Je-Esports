@@ -12,7 +12,9 @@ import {
   where,
   orderBy,
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  runTransaction,
+  type Transaction
 } from "firebase/firestore";
 import { Tournament, PlayerRegistration, TournamentStatus } from "./types";
 
@@ -167,68 +169,78 @@ export const deleteTournament = async (id: string) => {
 // Player Registration operations
 export const registerPlayer = async (registration: Omit<PlayerRegistration, 'id' | 'registrationTime'>) => {
   try {
-    // Get tournament details to check entry fee
-    const tournament = await getTournamentById(registration.tournamentId);
-    if (!tournament) {
-      throw new Error("Tournament not found");
-    }
+    return await runTransaction(db, async (transaction: Transaction) => {
+      // 1. Get tournament details
+      const tournamentRef = doc(db, "tournaments", registration.tournamentId);
+      const tournamentSnap = await transaction.get(tournamentRef);
 
-    const entryFee = tournament.entryFee || 0;
-
-    // If there's an entry fee, check and deduct from wallet
-    if (entryFee > 0) {
-      const walletRef = doc(db, "wallets", registration.userId);
-      const walletSnap = await getDoc(walletRef);
-
-      if (!walletSnap.exists()) {
-        throw new Error("Wallet not found. Please create a wallet first.");
+      if (!tournamentSnap.exists()) {
+        throw new Error("Tournament not found");
       }
 
-      const walletData = walletSnap.data();
-      const currentBalance = walletData.balance || 0;
+      const tournamentData = tournamentSnap.data();
+      const entryFee = tournamentData.entryFee || 0;
+      const currentRegisteredSlots = tournamentData.registeredSlots || 0;
+      const maxSlots = tournamentData.maxSlots || 0;
 
-      // Check if user has sufficient balance
-      if (currentBalance < entryFee) {
-        throw new Error(`Insufficient balance. You need ${entryFee} diamonds but only have ${currentBalance} diamonds.`);
+      // Double check if slots are full within the transaction to prevent race conditions
+      if (currentRegisteredSlots >= maxSlots) {
+        throw new Error("Tournament is full");
       }
 
-      // Deduct entry fee from wallet
-      const newBalance = currentBalance - entryFee;
-      await setDoc(
-        walletRef,
-        {
+      // 2. If there's an entry fee, check and deduct from wallet
+      if (entryFee > 0) {
+        const walletRef = doc(db, "wallets", registration.userId);
+        const walletSnap = await transaction.get(walletRef);
+
+        if (!walletSnap.exists()) {
+          throw new Error("Wallet not found. Please create a wallet first.");
+        }
+
+        const walletData = walletSnap.data();
+        const currentBalance = walletData.balance || 0;
+
+        // Check if user has sufficient balance
+        if (currentBalance < entryFee) {
+          throw new Error(`Insufficient balance. You need ${entryFee} diamonds but only have ${currentBalance} diamonds.`);
+        }
+
+        // Deduct entry fee from wallet
+        const newBalance = currentBalance - entryFee;
+        transaction.update(walletRef, {
           balance: newBalance,
           updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+        });
 
-      // Create transaction record
-      await addDoc(collection(db, "wallets", registration.userId, "transactions"), {
-        type: "tournament_entry",
-        amount: -entryFee,
-        tournamentId: registration.tournamentId,
-        tournamentName: tournament.name,
-        description: `Entry fee for ${tournament.name}`,
-        createdAt: serverTimestamp(),
+        // Create transaction record
+        const transactionRef = doc(collection(db, "wallets", registration.userId, "transactions"));
+        transaction.set(transactionRef, {
+          type: "tournament_entry",
+          amount: -entryFee,
+          tournamentId: registration.tournamentId,
+          tournamentName: tournamentData.name,
+          description: `Entry fee for ${tournamentData.name}`,
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      // 3. Create registration
+      const newRegistrationRef = doc(collection(db, "registrations"));
+      const registrationData = {
+        ...registration,
+        entryFeePaid: entryFee,
+        registrationTime: serverTimestamp()
+      };
+
+      transaction.set(newRegistrationRef, registrationData);
+
+      // 4. Update tournament registered slots count
+      transaction.update(tournamentRef, {
+        registeredSlots: currentRegisteredSlots + 1
       });
-    }
 
-    // Create registration
-    const registrationData = {
-      ...registration,
-      entryFeePaid: entryFee,
-      registrationTime: serverTimestamp()
-    };
-
-    const docRef = await addDoc(collection(db, "registrations"), registrationData);
-
-    // Update tournament registered slots count
-    await updateTournament(registration.tournamentId, {
-      registeredSlots: tournament.registeredSlots + 1
+      return { id: newRegistrationRef.id, ...registration };
     });
-
-    return { id: docRef.id, ...registration };
   } catch (error) {
     console.error("Error registering player:", error);
     throw error;
