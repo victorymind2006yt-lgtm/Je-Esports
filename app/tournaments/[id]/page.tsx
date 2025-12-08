@@ -132,7 +132,7 @@ export default function TournamentDetailPage() {
         userId: currentUser.uid,
         userName: currentUser.displayName || currentUser.email?.split("@")[0] || "Player",
         userEmail: currentUser.email || "",
-        userPhotoURL: currentUser.photoURL || undefined,
+        userPhotoURL: currentUser.photoURL || null,
         tournamentId: tournament.id,
         slotNumber,
       });
