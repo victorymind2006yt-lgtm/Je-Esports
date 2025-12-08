@@ -29,7 +29,7 @@ export interface PlayerRegistration {
   userId: string;
   userName: string;
   userEmail: string;
-  userPhotoURL?: string;
+  userPhotoURL?: string | null;
   tournamentId: string;
   teamName?: string;
   slotNumber?: number;
