@@ -190,6 +190,11 @@ export default function AdminDashboardPage() {
   const [balanceAdjustment, setBalanceAdjustment] = useState("");
   const [balanceAction, setBalanceAction] = useState<"add" | "subtract">("add");
 
+  // Edit Tournament State
+  const [showEditTournamentModal, setShowEditTournamentModal] = useState(false);
+  const [selectedTournamentForEdit, setSelectedTournamentForEdit] = useState<Tournament | null>(null);
+  const [editTournamentData, setEditTournamentData] = useState<Partial<Tournament>>({});
+
 
 
   const router = useRouter();
@@ -1115,6 +1120,42 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleOpenEditModal = (tournament: Tournament) => {
+    setSelectedTournamentForEdit(tournament);
+    setEditTournamentData({
+      name: tournament.name,
+      description: tournament.description,
+      mode: tournament.mode,
+      type: tournament.type,
+      entryFee: tournament.entryFee,
+      prizePool: tournament.prizePool,
+      maxSlots: tournament.maxSlots,
+      startTime: tournament.startTime,
+      roomId: tournament.roomId,
+      roomPassword: tournament.roomPassword,
+    });
+    setTournamentActionId(null);
+    setShowEditTournamentModal(true);
+  };
+
+  const handleSaveEditTournament = async () => {
+    if (!selectedTournamentForEdit || !editTournamentData) return;
+
+    try {
+      await updateTournament(selectedTournamentForEdit.id, editTournamentData);
+
+      setTournamentsData(prev => prev.map(t =>
+        t.id === selectedTournamentForEdit.id ? { ...t, ...editTournamentData } : t
+      ));
+
+      alert("Tournament updated successfully!");
+      setShowEditTournamentModal(false);
+    } catch (error) {
+      console.error("Failed to update tournament", error);
+      alert("Failed to update tournament. Please try again.");
+    }
+  };
+
   if (!authReady || !currentUser || !isAdmin) {
     return (
       <div className="global-bg flex min-h-screen items-center justify-center px-4 text-white">
@@ -1393,11 +1434,7 @@ export default function AdminDashboardPage() {
                             {tournamentActionId === tournament.id && (
                               <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-white/10 bg-[#1a1a1a] py-1 shadow-xl ring-1 ring-black/5">
                                 <button
-                                  onClick={() => {
-                                    // Placeholder for edit
-                                    alert("Edit functionality coming soon");
-                                    setTournamentActionId(null);
-                                  }}
+                                  onClick={() => handleOpenEditModal(tournament)}
                                   className="flex w-full items-center px-4 py-2 text-xs text-white hover:bg-white/5"
                                 >
                                   <Settings className="mr-2 h-3.5 w-3.5" />
@@ -2611,6 +2648,150 @@ export default function AdminDashboardPage() {
                   Update Balance
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Tournament Modal */}
+      {showEditTournamentModal && selectedTournamentForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0a0f0d] p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Edit Tournament</h3>
+              <button
+                onClick={() => setShowEditTournamentModal(false)}
+                className="rounded-full bg-white/5 p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-xs font-medium text-muted">Tournament Name</label>
+                <input
+                  type="text"
+                  value={editTournamentData.name || ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, name: e.target.value })}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-xs font-medium text-muted">Description</label>
+                <textarea
+                  value={editTournamentData.description || ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, description: e.target.value })}
+                  rows={2}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Mode</label>
+                <select
+                  value={editTournamentData.mode || "solo"}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, mode: e.target.value as any })}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white focus:border-emerald-400/60 focus:outline-none"
+                >
+                  <option value="solo">Solo</option>
+                  <option value="duo">Duo</option>
+                  <option value="squad">Squad</option>
+                  <option value="clash-squad">Clash Squad</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Type</label>
+                <select
+                  value={editTournamentData.type || "survival"}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, type: e.target.value as any })}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white focus:border-emerald-400/60 focus:outline-none"
+                >
+                  <option value="survival">Survival</option>
+                  <option value="per-kill">Per Kill</option>
+                  <option value="clash-squad">Clash Squad</option>
+                  <option value="lone-wolf">Lone Wolf</option>
+                  <option value="top-kill">Top Kill</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Entry Fee (💎)</label>
+                <input
+                  type="number"
+                  value={editTournamentData.entryFee ?? ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, entryFee: Number(e.target.value) })}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Prize Pool (💎)</label>
+                <input
+                  type="number"
+                  value={editTournamentData.prizePool ?? ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, prizePool: Number(e.target.value) })}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Max Slots</label>
+                <input
+                  type="number"
+                  value={editTournamentData.maxSlots ?? ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, maxSlots: Number(e.target.value) })}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Start Time</label>
+                <input
+                  type="datetime-local"
+                  value={editTournamentData.startTime ? new Date(new Date(editTournamentData.startTime).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, startTime: new Date(e.target.value) })}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Room ID (Optional)</label>
+                <input
+                  type="text"
+                  value={editTournamentData.roomId || ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, roomId: e.target.value })}
+                  placeholder="e.g. 12345678"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Room Password (Optional)</label>
+                <input
+                  type="text"
+                  value={editTournamentData.roomPassword || ""}
+                  onChange={(e) => setEditTournamentData({ ...editTournamentData, roomPassword: e.target.value })}
+                  placeholder="e.g. 1234"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white placeholder:text-muted focus:border-emerald-400/60 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-6 mt-2">
+              <button
+                onClick={() => setShowEditTournamentModal(false)}
+                className="flex-1 rounded-xl bg-white/5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEditTournament}
+                className="flex-1 rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400"
+              >
+                Save Changes
+              </button>
             </div>
           </div>
         </div>

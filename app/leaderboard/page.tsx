@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { Crown, Trophy, Gem, ArrowLeft, Medal } from "lucide-react";
 
@@ -29,10 +29,7 @@ export default function LeaderboardPage() {
 
                 const q = query(
                     collection(db, "weeklyLeaderboard"),
-                    where("weekId", "==", weekId),
-                    orderBy("wins", "desc"),
-                    orderBy("diamondsWon", "desc"),
-                    limit(50)
+                    where("weekId", "==", weekId)
                 );
 
                 const querySnapshot = await getDocs(q);
@@ -40,7 +37,15 @@ export default function LeaderboardPage() {
                     ...(doc.data() as LeaderboardEntry),
                 }));
 
-                setLeaders(data);
+                // Sort and limit client-side to avoid complex Firestore index requirements
+                data.sort((a, b) => {
+                    if (b.wins !== a.wins) {
+                        return b.wins - a.wins;
+                    }
+                    return b.diamondsWon - a.diamondsWon;
+                });
+
+                setLeaders(data.slice(0, 50));
             } catch (error) {
                 console.error("Error fetching leaderboard:", error);
             } finally {
