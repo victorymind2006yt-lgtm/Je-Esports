@@ -133,7 +133,13 @@ export const updateTournament = async (id: string, updates: Partial<Tournament>)
   try {
     const tournamentRef = doc(db, "tournaments", id);
 
-    // Handle date conversions
+    // Sanitize updates to remove undefined fields which Firestore rejects
+    Object.keys(updates).forEach(key => {
+      if ((updates as any)[key] === undefined) {
+        delete (updates as any)[key];
+      }
+    });
+
     const updateData: any = { ...updates, updatedAt: serverTimestamp() };
 
     if (updates.startTime) {

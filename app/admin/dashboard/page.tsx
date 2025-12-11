@@ -66,9 +66,13 @@ const ADMIN_EMAIL = "fflionking12345678@gmail.com";
 
 type OverviewStats = {
   totalUsers: number;
+  newUsersThisWeek: number;
+  totalAdmins: number;
   totalTournaments: number;
-  totalRevenue: number;
-  totalMatches: number;
+  activeTournaments: number;
+  pendingDepositsCount: number;
+  pendingWithdrawalsCount: number;
+  diamondCirculation: number;
 };
 
 type SystemStatus = "online" | "issue";
@@ -264,23 +268,46 @@ export default function AdminDashboardPage() {
 
       setLoadingOverview(true);
       try {
-        const [walletSnap, tournaments] = await Promise.all([
-          getDocs(collection(db, "wallets")),
-          getTournaments().catch(() => [] as Tournament[]),
-        ]);
-
         const totalUsers = walletSnap.size;
-        const totalTournaments = tournaments.length;
 
-        let totalRevenue = 0;
-        let totalMatches = 0;
+        // Calculate new users (assuming createdAt exists, else 0)
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        let newUsersThisWeek = 0;
+        let diamondCirculation = 0;
 
-        tournaments.forEach((tournament) => {
-          totalMatches += 1;
-          const entryFee = (tournament.entryFee ?? 0) as number;
-          const registeredSlots = (tournament.registeredSlots ?? 0) as number;
-          totalRevenue += entryFee * registeredSlots;
+        walletSnap.docs.forEach((doc) => {
+          const data = doc.data();
+          diamondCirculation += (data.balance || 0);
+          // timestamp check if available
+          if (data.createdAt && data.createdAt.toDate() > oneWeekAgo) {
+            newUsersThisWeek++;
+          }
         });
+
+        // Calculate tournament stats
+        const totalTournaments = tournaments.length; // Including deleted if fetched, but getTournaments usually filters? getTournaments() fetches all.
+        // Actually getTournaments in firebase.ts fetches all if no status passed.
+        // We probably want to exclude 'deleted' for "Total Tournaments"? 
+        // User's image shows "Total Tournaments". I'll count all non-deleted.
+        const activeTournaments = tournaments.filter(t => t.status === 'ongoing' || t.status === 'upcoming').length;
+        const actualTotalTournaments = tournaments.filter(t => t.status !== 'deleted').length;
+
+        // Pending payments
+        const requestsSnap = await getDocs(collection(db, "paymentRequests"));
+        const pendingDepositsCount = requestsSnap.docs.filter(d => d.data().type === 'deposit' && d.data().status === 'pending').length;
+        const pendingWithdrawalsCount = requestsSnap.docs.filter(d => d.data().type === 'withdraw' && d.data().status === 'pending').length;
+
+        // Admins
+        const adminsSnap = await getDocs(collection(db, 'admins'));
+        // Total admins = admins collection size + 1 (super admin if not in collection)
+        // Actually logic says "Owner & assigned admins".
+        // Let's just use adminIds.length.
+        // Wait, adminIds is set later.
+        const totalAdmins = adminsSnap.size + (adminsSnap.docs.find(d => d.data().email === ADMIN_EMAIL) ? 0 : 1);
+
+
+        // ... existing wallet processing code ...
 
         const walletSummaries: WalletUserSummary[] = walletSnap.docs.map(
           (docSnap) => {
@@ -296,6 +323,8 @@ export default function AdminDashboardPage() {
             };
           },
         );
+
+        // ... existing transaction processing code ...
 
         const allTransactions: AdminTransaction[] = [];
         for (const docSnap of walletSnap.docs) {
@@ -321,11 +350,10 @@ export default function AdminDashboardPage() {
         });
 
         // Load admin IDs
-        const adminsSnap = await getDocs(collection(db, "admins"));
         const adminIdList = adminsSnap.docs.map((docSnap) => docSnap.id);
         setAdminIds(adminIdList);
 
-        // Load redeem codes
+        // ... redeem codes loading (keep existing) ...
         try {
           const redeemSnap = await getDocs(
             query(
@@ -354,9 +382,13 @@ export default function AdminDashboardPage() {
           console.error("Failed to load redeem codes", error);
         }
 
-        // Load payment requests
+        // Load payment requests (keep existing logic but update state)
+        // ... (reuse existing payment loading logic if possible or just rely on what we fetched for counts)
+        // The original code fetched limit(100) sorted by date.
+        // We'll keep the full fetch for the list.
+
         try {
-          const requestsSnap = await getDocs(
+          const requestsSnapOrdered = await getDocs(
             query(
               collection(db, "paymentRequests"),
               orderBy("createdAt", "desc"),
@@ -364,7 +396,7 @@ export default function AdminDashboardPage() {
             ),
           );
 
-          const allRequests: PaymentRequest[] = requestsSnap.docs.map(
+          const allRequests: PaymentRequest[] = requestsSnapOrdered.docs.map(
             (docSnap) => {
               const data = docSnap.data() as any;
               return {
@@ -386,13 +418,8 @@ export default function AdminDashboardPage() {
               };
             },
           );
-
-          const deposits = allRequests.filter(
-            (r) => r.type === "deposit" && r.status === "pending",
-          );
-          const withdrawals = allRequests.filter(
-            (r) => r.type === "withdraw" && r.status === "pending",
-          );
+          const deposits = allRequests.filter(r => r.type === "deposit" && r.status === "pending");
+          const withdrawals = allRequests.filter(r => r.type === "withdraw" && r.status === "pending");
 
           setPendingDeposits(deposits);
           setPendingWithdrawals(withdrawals);
@@ -402,10 +429,15 @@ export default function AdminDashboardPage() {
 
         setOverview({
           totalUsers,
-          totalTournaments: tournaments.filter((t) => t.status !== "deleted").length,
-          totalRevenue, // Revenue includes deleted tournaments
-          totalMatches,
+          newUsersThisWeek,
+          totalAdmins,
+          totalTournaments: actualTotalTournaments,
+          activeTournaments,
+          pendingDepositsCount,
+          pendingWithdrawalsCount,
+          diamondCirculation
         });
+
         setTournamentsData(tournaments.filter((t) => t.status !== "deleted"));
         setWalletUsers(walletSummaries);
         setTransactions(allTransactions);
@@ -1169,9 +1201,13 @@ export default function AdminDashboardPage() {
 
   const overviewSafe: OverviewStats = overview ?? {
     totalUsers: 0,
+    newUsersThisWeek: 0,
+    totalAdmins: 0,
     totalTournaments: 0,
-    totalRevenue: 0,
-    totalMatches: 0,
+    activeTournaments: 0,
+    pendingDepositsCount: 0,
+    pendingWithdrawalsCount: 0,
+    diamondCirculation: 0,
   };
 
   const formatDateTime = (date?: Date | null) => {
@@ -1242,37 +1278,44 @@ export default function AdminDashboardPage() {
     if (activeTab === "dashboard") {
       return (
         <>
-          <section className="grid gap-4 md:grid-cols-4">
+          <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <AdminStatCard
               label="Total Users"
-              description="Players with wallets"
+              description={`${loadingOverview ? "-" : overviewSafe.newUsersThisWeek} new this week`}
+              descriptionColor="text-red-400"
               icon={Users}
               value={loadingOverview ? "-" : overviewSafe.totalUsers.toString()}
             />
             <AdminStatCard
+              label="Total Admins"
+              description="Owner & assigned admins"
+              icon={ShieldCheck}
+              value={loadingOverview ? "-" : overviewSafe.totalAdmins.toString()}
+            />
+            <AdminStatCard
               label="Total Tournaments"
-              description="Across all modes"
+              description={`${loadingOverview ? "-" : overviewSafe.activeTournaments} currently active`}
+              descriptionColor="text-red-400"
               icon={Trophy}
               value={
                 loadingOverview ? "-" : overviewSafe.totalTournaments.toString()
               }
             />
             <AdminStatCard
-              label="Total Revenue"
-              description="Entry fees collected"
-              icon={DollarSign}
+              label="Pending Payments"
+              description={`${loadingOverview ? "-" : overviewSafe.pendingDepositsCount} deposits, ${loadingOverview ? "-" : overviewSafe.pendingWithdrawalsCount} withdrawals`}
+              descriptionColor="text-red-400"
+              icon={CreditCard}
               value={
-                loadingOverview
-                  ? "-"
-                  : `₨${overviewSafe.totalRevenue.toLocaleString("en-PK")}`
+                loadingOverview ? "-" : (overviewSafe.pendingDepositsCount + overviewSafe.pendingWithdrawalsCount).toString()
               }
             />
             <AdminStatCard
-              label="Total Matches"
-              description="Tournaments scheduled"
-              icon={CalendarClock}
+              label="Diamond Circulation"
+              description="Total diamonds in all wallets"
+              icon={GemIcon}
               value={
-                loadingOverview ? "-" : overviewSafe.totalMatches.toString()
+                loadingOverview ? "-" : overviewSafe.diamondCirculation.toString()
               }
             />
           </section>
@@ -2803,20 +2846,21 @@ export default function AdminDashboardPage() {
 type StatCardProps = {
   label: string;
   description: string;
+  descriptionColor?: string;
   value: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 
-function AdminStatCard({ label, description, value, icon: Icon }: StatCardProps) {
+function AdminStatCard({ label, description, descriptionColor, value, icon: Icon }: StatCardProps) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#080f0c] px-5 py-4">
-      <div className="flex items-center justify-between text-xs text-muted">
+    <div className="rounded-xl border border-white/10 bg-[#080f0c] px-5 py-4 min-h-[120px] flex flex-col justify-between">
+      <div className="flex items-center justify-between text-xs text-muted font-medium uppercase tracking-wider">
         <span>{label}</span>
         <Icon className="h-4 w-4 text-emerald-300" />
       </div>
       <div className="mt-3">
-        <p className="text-2xl font-semibold text-white">{value}</p>
-        <p className="text-xs text-muted">{description}</p>
+        <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
+        <p className={`mt-1 text-xs ${descriptionColor || "text-muted"}`}>{description}</p>
       </div>
 
     </div>
