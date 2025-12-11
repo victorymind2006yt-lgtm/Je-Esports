@@ -73,6 +73,8 @@ type OverviewStats = {
   pendingDepositsCount: number;
   pendingWithdrawalsCount: number;
   diamondCirculation: number;
+  totalRevenue: number;
+  totalDeposited: number;
 };
 
 type SystemStatus = "online" | "issue";
@@ -290,6 +292,13 @@ export default function AdminDashboardPage() {
           }
         });
 
+        // Calculate total deposited across all wallets
+        let totalDeposited = 0;
+        walletSnap.docs.forEach((doc) => {
+          const data = doc.data();
+          totalDeposited += (data.totalDeposited || 0);
+        });
+
         // Calculate tournament stats
         const totalTournaments = tournaments.length; // Including deleted if fetched, but getTournaments usually filters? getTournaments() fetches all.
         // Actually getTournaments in firebase.ts fetches all if no status passed.
@@ -297,6 +306,16 @@ export default function AdminDashboardPage() {
         // User's image shows "Total Tournaments". I'll count all non-deleted.
         const activeTournaments = tournaments.filter(t => t.status === 'ongoing' || t.status === 'upcoming').length;
         const actualTotalTournaments = tournaments.filter(t => t.status !== 'deleted').length;
+
+        // Calculate Total Revenue (Entry Fees Collected)
+        let totalRevenue = 0;
+        tournaments.forEach((tournament) => {
+          if (tournament.status !== 'deleted') {
+            const entryFee = (tournament.entryFee ?? 0) as number;
+            const registeredSlots = (tournament.registeredSlots ?? 0) as number;
+            totalRevenue += entryFee * registeredSlots;
+          }
+        });
 
         // Pending payments
         const requestsSnap = await getDocs(collection(db, "paymentRequests"));
@@ -440,7 +459,9 @@ export default function AdminDashboardPage() {
           activeTournaments,
           pendingDepositsCount,
           pendingWithdrawalsCount,
-          diamondCirculation
+          diamondCirculation,
+          totalRevenue,
+          totalDeposited
         });
 
         setTournamentsData(tournaments.filter((t) => t.status !== "deleted"));
@@ -1213,6 +1234,8 @@ export default function AdminDashboardPage() {
     pendingDepositsCount: 0,
     pendingWithdrawalsCount: 0,
     diamondCirculation: 0,
+    totalRevenue: 0,
+    totalDeposited: 0,
   };
 
   const formatDateTime = (date?: Date | null) => {
@@ -1321,6 +1344,22 @@ export default function AdminDashboardPage() {
               icon={GemIcon}
               value={
                 loadingOverview ? "-" : overviewSafe.diamondCirculation.toString()
+              }
+            />
+            <AdminStatCard
+              label="Total Revenue"
+              description="Entry fees collected"
+              icon={DollarSign}
+              value={
+                loadingOverview ? "-" : overviewSafe.totalRevenue.toString()
+              }
+            />
+            <AdminStatCard
+              label="Total Deposited"
+              description="Diamonds loaded by users"
+              icon={Wallet}
+              value={
+                loadingOverview ? "-" : overviewSafe.totalDeposited.toString()
               }
             />
           </section>
