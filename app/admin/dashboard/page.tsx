@@ -268,6 +268,11 @@ export default function AdminDashboardPage() {
 
       setLoadingOverview(true);
       try {
+        const [walletSnap, tournaments] = await Promise.all([
+          getDocs(collection(db, "wallets")),
+          getTournaments().catch(() => [] as Tournament[]),
+        ]);
+
         const totalUsers = walletSnap.size;
 
         // Calculate new users (assuming createdAt exists, else 0)
